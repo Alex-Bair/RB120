@@ -8,6 +8,13 @@ To do:
   - post-game phase
 - check flow of game & determine when to have sleeps and how long
 
+Ask LS Slack question about how Ruby looks up constants for child and parent classes.
+See exploration_space.rb and 
+https://stackoverflow.com/questions/48817287/accessing-a-childs-constant-from-the-parents-class
+https://stackoverflow.com/questions/9949655/get-child-constant-in-parent-method-ruby
+for examples of what I'm talking about.
+
+
 =end
 
 class Score
@@ -36,42 +43,53 @@ class Score
 end
 
 class Move
-  VALUES = ['rock', 'paper', 'scissors']
-
-  def initialize(value)
-    @value = value
-  end
-
-  def scissors?
-    @value == 'scissors'
-  end
-
-  def rock?
-    @value == 'rock'
-  end
-
-  def paper?
-    @value == 'paper'
-  end
-
   def >(other_move)
-    (rock? && other_move.scissors?) ||
-      (paper? && other_move.rock?) ||
-      (scissors? && other_move.paper?)
+    self.class::WINS_AGAINST.include?(other_move.to_s)
   end
 
   def <(other_move)
-    (rock? && other_move.paper?) ||
-      (paper? && other_move.scissors?) ||
-      (scissors? && other_move.rock?)
+    self.class::LOSES_AGAINST.include?(other_move.to_s)
   end
 
   def to_s
-    @value
+    self.class.to_s.downcase
   end
 end
 
+class Rock < Move
+  WINS_AGAINST = ['scissors', 'lizard']
+  LOSES_AGAINST = ['paper', 'spock']
+end
+
+class Paper < Move
+  WINS_AGAINST = ['rock', 'spock']
+  LOSES_AGAINST = ['scissors', 'lizard']
+end
+
+class Scissors < Move
+  WINS_AGAINST = ['paper', 'lizard']
+  LOSES_AGAINST = ['rock', 'spock']
+end
+
+class Lizard < Move
+  WINS_AGAINST = ['spock', 'paper']
+  LOSES_AGAINST = ['rock', 'scissors']
+end
+
+class Spock < Move
+  WINS_AGAINST = ['scissors', 'rock']
+  LOSES_AGAINST = ['lizard', 'paper']
+end
+
 class Player
+  USER_INPUT_CONVERSION = {
+    'rock' => Rock.new,
+    'paper' => Paper.new,
+    'scissors' => Scissors.new,
+    'lizard' => Lizard.new,
+    'spock' => Spock.new
+  }
+  
   attr_accessor :move, :name, :score
 
   def initialize
@@ -100,13 +118,13 @@ class Human < Player
     choice = nil
 
     loop do
-      puts "Please choose rock, paper, or scissors:"
+      puts "Please choose rock, paper, scissors, lizard, or spock:"
       choice = gets.chomp
-      break if Move::VALUES.include?(choice)
+      break if USER_INPUT_CONVERSION.include?(choice)
       puts "Sorry, invalid choice."
     end
 
-    self.move = Move.new(choice)
+    self.move = USER_INPUT_CONVERSION[choice]
   end
 end
 
@@ -116,7 +134,7 @@ class Computer < Player
   end
 
   def choose
-    self.move = Move.new(Move::VALUES.sample)
+    self.move = USER_INPUT_CONVERSION[(USER_INPUT_CONVERSION.keys.sample)]
   end
 end
 
@@ -131,13 +149,13 @@ class RPSGame
 
   def display_welcome_message
     system 'clear'
-    puts "Welcome to Rock, Paper, Scissors (RPS)! You'll be playing against #{computer}. Each round will be worth one point, and the winner is whoever reaches 10 points first."
+    puts "Welcome to Rock, Paper, Scissors, Lizard, Spock (RPSLS)! You'll be playing against #{computer}. Each round will be worth one point, and the winner is whoever reaches 10 points first."
     puts "Press any key to start!"
     gets
   end
 
   def display_goodbye_message
-    puts "Thanks for playing Rock, Paper, Scissors. Goodbye!"
+    puts "Thanks for playing Rock, Paper, Scissors, Lizard, Spock. Goodbye!"
   end
 
   def display_moves
