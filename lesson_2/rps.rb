@@ -1,9 +1,9 @@
 =begin
 To do:
 - clear the screen after each round
-- keep track of the round number
 - standardize display
   - better interface
+  - show round number, point total, names
 
 - organize RPSGame#play method into different phases
   - opening phase
@@ -13,8 +13,6 @@ To do:
 - have computer taunt after 8 rounds
 - have computer make a statement after winning and after losing
 - check flow of game & determine when to have sleeps and how long
-- implement move history (see exploration_space.rb for initial thoughts and draft ideas)
-  - allow user to check move history by typing 'history' before choosing a move
 - rubocop program
 
 Ask LS Slack question about how Ruby looks up constants for child and parent classes.
@@ -26,9 +24,13 @@ for examples of what I'm talking about.
 
 =end
 
+require 'pry'
+
 class Score
   WINNING_SCORE = 10
   STARTING_SCORE = 0
+
+  attr_reader :score
 
   def initialize
     @score = STARTING_SCORE
@@ -43,7 +45,11 @@ class Score
   end
 
   def win?
-    @score >= WINNING_SCORE
+    score >= WINNING_SCORE
+  end
+
+  def <=>(other_score)
+    score <=> other_score.score
   end
 
   def to_s
@@ -90,25 +96,6 @@ class Spock < Move
   LOSES_AGAINST = ['lizard', 'paper']
 end
 
-class MoveHistory
-  attr_accessor :history
-  
-  def initialize
-    @history = []
-  end
-  
-  def reset
-    @history = []
-  end
-  
-  def record(move)
-    history << move
-  end
-  
-  def to_s
-    history
-  end
-end
 
 class Player
   USER_INPUT_CONVERSION = {
@@ -124,11 +111,6 @@ class Player
   def initialize
     set_name
     @score = Score.new
-    @move_history = MoveHistory.new
-  end
-  
-  def record_move
-    move_history.record(move.to_s)
   end
   
   def to_s
@@ -159,7 +141,6 @@ class Human < Player
     end
 
     self.move = USER_INPUT_CONVERSION[choice]
-    self.record_move
   end
 end
 
@@ -169,43 +150,36 @@ class Computer < Player
   end
 
   def choose_random
+    puts "Choosing random move"
     self.move = USER_INPUT_CONVERSION[(USER_INPUT_CONVERSION.keys.sample)]
-    self.record_move
   end
   
   def choose_rock
     self.move = Rock.new
-    self.record_move
   end
   
   def choose_paper
     self.move = Paper.new
-    self.record_move
   end
   
   def choose_scissors
     self.move = Scissors.new
-    self.record_move
   end
   
   def choose_lizard
     self.move = Lizard.new
-    self.record_move
   end
   
   def choose_spock
     self.move = Spock.new
-    self.record_move
   end
   
   def choose_losing_move(human_move)
     self.move = human_move.class::WINS_AGAINST[0]
-    self.record_move
   end
   
   def choose_winning_move(human_move)
     self.move = human_move.class::LOSES_AGAINST[0]
-    self.record_move
   end
 end
 
@@ -273,6 +247,67 @@ class Zenos < Computer
   end
 end
 
+class MoveHistory
+  attr_accessor :history
+  ROUND_COLUMN_SIZE = 11
+  PLAYER_COLUMN_SIZE = 15
+  COMPUTER_COLUMN_SIZE = 15
+  TABLE_WIDTH = ROUND_COLUMN_SIZE + PLAYER_COLUMN_SIZE + COMPUTER_COLUMN_SIZE + 2
+  
+  def initialize
+    @history = Hash.new
+  end
+  
+  def reset
+    @history = Hash.new
+  end
+  
+  def record(round, human_move, computer_move)
+    history[round] = [human_move, computer_move] #Does this need self at the beginning of history[round] =??
+  end
+  
+  def display(computer_name)
+    display_title
+    display_top_bottom_line
+    display_header(computer_name)
+    display_round_lines
+    display_top_bottom_line
+  end
+  
+  def display_title
+    puts "MOVE HISTORY".center(TABLE_WIDTH + 2)
+  end
+  
+  def display_header(computer_name)
+    round_header = "Round".center(ROUND_COLUMN_SIZE)
+    human_header = "You".center(PLAYER_COLUMN_SIZE)
+    computer_header = computer_name.center(COMPUTER_COLUMN_SIZE)
+    puts "|#{round_header}|#{human_header}|#{computer_header}|"
+  end
+  
+  def display_top_bottom_line
+    puts "+#{'-' * TABLE_WIDTH}+"
+  end
+  
+  def display_middle_line
+    puts "|#{'-' * TABLE_WIDTH}|"
+  end
+  
+  def display_round(round, player_move, computer_move)
+    round = round.to_s.center(ROUND_COLUMN_SIZE)
+    player_move = player_move.center(PLAYER_COLUMN_SIZE)
+    computer_move = computer_move.center(COMPUTER_COLUMN_SIZE)
+    puts "|#{round}|#{player_move}|#{computer_move}|"
+  end
+  
+  def display_round_lines
+    history.each do |round, (player_move, computer_move)|
+      display_middle_line
+      display_round(round, player_move, computer_move)
+    end
+  end
+end
+
 # Game Orchestration Engine
 class RPSGame
   OPPONENTS = {
@@ -286,11 +321,30 @@ class RPSGame
     'zenos' => Zenos.new
   }
 
-  attr_accessor :human, :computer
+  VALID_QUITS = [
+    'quit',
+    'q',
+    'exit',
+    'e',
+    'give up',
+    'g'
+    ]
+
+  attr_accessor :human, :computer, :round, :history
 
   def initialize
     @human = Human.new
     choose_opponent
+    @round = 0
+    @history = MoveHistory.new
+  end
+
+  def increase_round
+    @round += 1
+  end
+
+  def record_moves
+    history.record(round, human.move.to_s, computer.move.to_s)
   end
 
   def choose_opponent
@@ -306,8 +360,8 @@ class RPSGame
   end
 
   def list_opponents
-    ['Rockman', 'Papyrus', 'DJ Cutman', 'Martin', 'Picard', 'Glass Joe', 'GLaDOS', 'Zenos'].each do |name|
-      puts "- #{name}"
+    OPPONENTS.each_value do |opponent|
+      puts "- #{opponent.name}"
     end
   end
 
@@ -341,12 +395,13 @@ class RPSGame
     end
   end
 
-  def update_score
+  def update_score_and_history
     if human.move > computer.move
       human.score.increase
     elsif human.move < computer.move
       computer.score.increase
     end
+    record_moves
   end
 
   def reset_scores
@@ -376,6 +431,10 @@ class RPSGame
     answer.downcase == 'y'
   end
 
+  def continue?
+    
+  end
+
   def clear_screen
     system 'clear'
   end
@@ -384,22 +443,46 @@ class RPSGame
     sleep 1
   end
 
+  def quit?
+    answer = nil
+    loop do
+      puts "Type 'quit', 'exit', or 'give up' to stop playing. Type 'history' to see move history. Press [ENTER] to continue playing."
+      answer = gets.chomp
+      break unless answer == 'history'
+      display_move_history
+    end
+    VALID_QUITS.include?(answer)
+  end
+
+  def display_move_history
+    history.display(computer.name)
+    wait_for_input
+    clear_screen
+  end
+
+  def wait_for_input
+    gets
+  end
+
   def play
     display_welcome_message
 
     loop do
+      increase_round
       clear_screen
       display_score
       human.choose
       computer.choose(human.move, human.score)
       display_moves
-      update_score
+      update_score_and_history
       display_round_winner
       pause
       if winning_score?
         display_overall_winner
         break unless play_again?
-        reset_scores
+        reset_scores #need to reset game (score, history, choose new opponent)
+      else
+        break if quit?
       end
     end
 
