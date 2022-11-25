@@ -10,10 +10,11 @@ welcome: |
   Press [ENTER] to start!
 choose_opponent: "Please choose your opponentm by typing their name:"
 invalid_opponent: "Invalid opponent. Please type in a valid opponent."
+choose_move: "Please choose rock (r), paper (p), scissors (sc), lizard (l), or spock (sp):"
 goodbye: "Thanks for playing Rock, Paper, Scissors, Lizard, Spock. Goodbye!"
 tie: "It's a tie!"
 play_again?: "Would you like to play again? (y/n). Type 'history' for move history."
-invalid_play_again: "Sorry, must be y or n."
+bad_input: "Sorry, must be y or n."
 quit_early?: "Type 'quit', 'exit', or 'give up' to stop playing. Type 'history' to see move history. Press [ENTER] to continue playing."
 rockman_opening: "You're not Dr. Wily, are you?"
 rockman_taunt: "Are you scared in the face of my rock-solid strategy?"

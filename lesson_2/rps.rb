@@ -7,18 +7,18 @@ To do:
 - rubocop program
 
 Ask LS Slack question about how Ruby looks up constants for child and parent classes.
-See exploration_space.rb and 
+See exploration_space.rb and
 https://stackoverflow.com/questions/48817287/accessing-a-childs-constant-from-the-parents-class
 https://stackoverflow.com/questions/9949655/get-child-constant-in-parent-method-ruby
 for examples of what I'm talking about.
 
-
 =end
 
 require 'yaml'
-require 'pry'
 
 module Promptable
+  MESSAGES = YAML.load_file('rps_message.yml')
+
   def prompt(message)
     puts "=> #{message}"
   end
@@ -26,7 +26,7 @@ end
 
 class Score
   WINNING_SCORE = 10
-  STARTING_SCORE = 9
+  STARTING_SCORE = 0
 
   attr_reader :score
 
@@ -96,7 +96,7 @@ end
 
 class Player
   include Promptable
-  
+
   USER_INPUT_CONVERSION = {
     'rock' => Rock.new,
     'r' => Rock.new,
@@ -109,26 +109,26 @@ class Player
     'spock' => Spock.new,
     'sp' => Spock.new
   }
-  
+
   attr_accessor :move, :name, :score, :move_history
 
   def initialize
     set_name
     @score = Score.new
   end
-  
+
   def win?
     score.win?
   end
-  
+
   def to_s
-    self.name
+    name
   end
 end
 
 class Human < Player
   attr_reader :opening
-  
+
   def set_name
     n = ''
     loop do
@@ -145,7 +145,7 @@ class Human < Player
     choice = nil
 
     loop do
-      prompt("Please choose rock (r), paper (p), scissors (sc), lizard (l), or spock (sp):")
+      prompt(MESSAGES['choose_move'])
       choice = gets.chomp
       break if USER_INPUT_CONVERSION.include?(choice)
       prompt("Sorry, invalid choice.")
@@ -153,8 +153,8 @@ class Human < Player
 
     self.move = USER_INPUT_CONVERSION[choice]
   end
-  
-  def get_opening
+
+  def set_opening
     @opening = gets.chomp.strip
   end
 end
@@ -167,68 +167,68 @@ class Computer < Player
   def choose_random
     self.move = USER_INPUT_CONVERSION[(USER_INPUT_CONVERSION.keys.sample)]
   end
-  
+
   def prompt(message)
     puts "#{@name} => #{message}"
   end
-  
+
   def choose_rock
     self.move = Rock.new
   end
-  
+
   def choose_paper
     self.move = Paper.new
   end
-  
+
   def choose_scissors
     self.move = Scissors.new
   end
-  
+
   def choose_lizard
     self.move = Lizard.new
   end
-  
+
   def choose_spock
     self.move = Spock.new
   end
-  
+
   def choose_losing_move(human_move)
     self.move = human_move.class::WINS_AGAINST[0]
   end
-  
+
   def choose_winning_move(human_move)
     self.move = human_move.class::LOSES_AGAINST[0]
   end
-  
+
   def opening
     yaml_key = self.class.to_s.downcase + "_opening"
-    prompt(RPSGame::MESSAGES[yaml_key])
+    prompt(MESSAGES[yaml_key])
   end
-  
+
   def taunt
     yaml_key = self.class.to_s.downcase + "_taunt"
-    prompt(RPSGame::MESSAGES[yaml_key])
+    prompt(MESSAGES[yaml_key])
   end
-  
+
   def win
     yaml_key = self.class.to_s.downcase + "_win"
-    prompt(RPSGame::MESSAGES[yaml_key])
+    prompt(MESSAGES[yaml_key])
   end
-  
+
   def lose
     yaml_key = self.class.to_s.downcase + "_lose"
-    prompt(RPSGame::MESSAGES[yaml_key])
+    prompt(MESSAGES[yaml_key])
   end
 end
 
 class Rockman < Computer
-  def choose(human_move, human_score)
+  def choose(*)
     choose_rock
   end
 end
 
 class Papyrus < Computer
-  def choose(human_move, human_score)
+  def choose(*)
     choose_paper
   end
 end
@@ -237,20 +237,20 @@ class DJCutman < Computer
   def set_name
     @name = 'DJ Cutman'
   end
-  
-  def choose(human_move, human_score)
+
+  def choose(*)
     choose_scissors
   end
 end
 
 class Martin < Computer
-  def choose(human_move, human_score)
+  def choose(*)
     choose_lizard
   end
 end
 
 class Picard < Computer
-  def choose(human_move, human_score)
+  def choose(*)
     choose_spock
   end
 end
@@ -259,8 +259,8 @@ class GlassJoe < Computer
   def set_name
     @name = 'Glass Joe'
   end
-  
-  def choose(human_move, human_score)
+
+  def choose(human_move, _)
     choose_losing_move(human_move)
   end
 end
@@ -269,15 +269,15 @@ class Glados < Computer
   def set_name
     @name = 'GLaDOS'
   end
-  
-  def choose(human_move, human_score)
+
+  def choose(human_move, _)
     choose_winning_move(human_move)
   end
 end
 
 class Zenos < Computer
   def choose(human_move, human_score)
-    case human_score <=> self.score
+    case human_score <=> score
     when 0 then choose_random
     when -1 then choose_losing_move(human_move)
     when 1 then choose_winning_move(human_move)
@@ -286,7 +286,7 @@ class Zenos < Computer
 end
 
 class BMO < Computer
-  def choose(human_move, human_score)
+  def choose(*)
     choose_random
   end
 end
@@ -294,10 +294,10 @@ end
 class MoveHistory
   attr_accessor :history
 
-  ROUND_COLUMN_SIZE = 11
-  PLAYER_COLUMN_SIZE = 15
-  COMPUTER_COLUMN_SIZE = 15
-  TABLE_WIDTH = ROUND_COLUMN_SIZE + PLAYER_COLUMN_SIZE + COMPUTER_COLUMN_SIZE + 2
+  ROUND_COL_SIZE = 11
+  HUMAN_COL_SIZE = 15
+  COMP_COL_SIZE = 15
+  TABLE_WIDTH = ROUND_COL_SIZE + HUMAN_COL_SIZE + COMP_COL_SIZE + 2
 
   def initialize
     @history = Hash.new
@@ -324,9 +324,9 @@ class MoveHistory
   end
 
   def display_header(computer_name)
-    round_header = "Round".center(ROUND_COLUMN_SIZE)
-    human_header = "You".center(PLAYER_COLUMN_SIZE)
-    computer_header = computer_name.center(COMPUTER_COLUMN_SIZE)
+    round_header = "Round".center(ROUND_COL_SIZE)
+    human_header = "You".center(HUMAN_COL_SIZE)
+    computer_header = computer_name.center(COMP_COL_SIZE)
     puts "|#{round_header}|#{human_header}|#{computer_header}|"
   end
 
@@ -339,9 +339,9 @@ class MoveHistory
   end
 
   def display_round(round, player_move, computer_move)
-    round = round.to_s.center(ROUND_COLUMN_SIZE)
-    player_move = player_move.center(PLAYER_COLUMN_SIZE)
-    computer_move = computer_move.center(COMPUTER_COLUMN_SIZE)
+    round = round.to_s.center(ROUND_COL_SIZE)
+    player_move = player_move.center(HUMAN_COL_SIZE)
+    computer_move = computer_move.center(COMP_COL_SIZE)
     puts "|#{round}|#{player_move}|#{computer_move}|"
   end
 
@@ -356,9 +356,7 @@ end
 # Game Orchestration Engine
 class RPSGame
   include Promptable
-  
-  MESSAGES = YAML.load_file('rps_message.yml')
-  
+
   OPPONENTS = {
     'rockman' => Rockman.new,
     'papyrus' => Papyrus.new,
@@ -378,7 +376,7 @@ class RPSGame
     'e',
     'give up',
     'g'
-    ]
+  ]
 
   TAUNT_ROUND = 7
 
@@ -406,7 +404,7 @@ class RPSGame
       prompt(MESSAGES['choose_opponent'])
       list_opponents
       input = gets.chomp.downcase
-      break if OPPONENTS.has_key?(input)
+      break if OPPONENTS.key?(input)
       prompt(MESSAGES['invalid_opponent'])
     end
     @computer = OPPONENTS[input]
@@ -456,7 +454,9 @@ class RPSGame
   end
 
   def display_score
-    puts "#{human}'s score: #{human.score}   #{computer}'s score: #{computer.score}"
+    human_output = "#{human}'s score: #{human.score}"
+    computer_output = "#{computer}'s score: #{computer.score}"
+    puts "#{human_output}   #{computer_output}"
   end
 
   def display_round_winner
@@ -480,9 +480,7 @@ class RPSGame
   end
 
   def reset
-    [human.score, computer.score, history].each do |component|
-      component.reset
-    end
+    [human.score, computer.score, history].each(&:reset)
     @round = 0
     choose_opponent
   end
@@ -493,7 +491,7 @@ class RPSGame
 
   def display_overall_winner
     winner = human.win? ? human : computer
-    puts "#{winner} reached #{Score::WINNING_SCORE} points and is the overall winner!"
+    puts "#{winner} reached #{Score::WINNING_SCORE} points and won the game!"
   end
 
   def play_again?
@@ -503,7 +501,7 @@ class RPSGame
       puts MESSAGES['play_again?']
       answer = gets.chomp
       break if ['y', 'n'].include?(answer.downcase)
-      answer == 'history' ? display_move_history : puts(MESSAGES['invalid_play_again'])
+      answer == 'history' ? display_move_history : puts(MESSAGES['bad_input'])
     end
 
     answer.downcase == 'y'
@@ -550,7 +548,7 @@ class RPSGame
     clear_screen
     prompt(MESSAGES['announcer_opening_1'])
     prompt("#{human}, do you have anything to say to #{computer}?")
-    human.get_opening
+    human.set_opening
     announcer_response_to_human_opening
     pause(5)
   end
@@ -595,7 +593,6 @@ class RPSGame
     display_overall_winner
     prompt("It looks like #{computer} has some final words!")
     computer.win? ? computer.win : computer.lose
-    gets
   end
 
   def taunt_phase
@@ -604,17 +601,21 @@ class RPSGame
     pause(5)
   end
 
+  def round_phase
+    move_phase
+    endround_phase
+    taunt_phase if round == TAUNT_ROUND
+  end
+
   def main_game_phase_loop
     loop do
-      move_phase
-      endround_phase
-      taunt_phase if round == TAUNT_ROUND
+      round_phase
       if winning_score?
         endgame_phase
         break unless play_again?
         reset
-      else
-        break if quit_early?
+      elsif quit_early?
+        break
       end
     end
   end
@@ -624,7 +625,7 @@ class RPSGame
   end
 
   def play
-    #pregame_phase
+    pregame_phase
 
     main_game_phase_loop
 
