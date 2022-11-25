@@ -1,0 +1,76 @@
+welcome: |
+  Welcome to Rock, Paper, Scissors, Lizard, Spock (RPSLS)! 
+  
+  You'll be playing against an opponent of your choosing.
+  
+  Each round will be worth one point, and the winner is whoever reaches 10 points first!
+  
+  Rules can be found at: https://web.archive.org/web/20181217114425/http://www.samkass.com/theories/RPSSL.html
+  
+  Press [ENTER] to start!
+choose_opponent: "Please choose your opponentm by typing their name:"
+invalid_opponent: "Invalid opponent. Please type in a valid opponent."
+goodbye: "Thanks for playing Rock, Paper, Scissors, Lizard, Spock. Goodbye!"
+tie: "It's a tie!"
+play_again?: "Would you like to play again? (y/n). Type 'history' for move history."
+invalid_play_again: "Sorry, must be y or n."
+quit_early?: "Type 'quit', 'exit', or 'give up' to stop playing. Type 'history' to see move history. Press [ENTER] to continue playing."
+rockman_opening: "You're not Dr. Wily, are you?"
+rockman_taunt: "Are you scared in the face of my rock-solid strategy?"
+rockman_win: "On to the next opponent!"
+rockman_lose: "I should have beat more robot masters before facing you..."
+papyrus_opening: "BEHOLD THE GREAT PAPYRUS!"
+papyrus_taunt: "I'VE WARGAMED THESE SCENARIOS WITH MY ACTION FIGURES! I CAN'T LOSE!"
+papyrus_win: "ANOTHER DECISIVE VICTORY FOR PAPYRUS!"
+papyrus_lose: |
+  YOU ARE LUCKY! IF I HAD USED MY SPECIAL MOVE, IT WOULD HAVE BEEN ALL OVER FOR YOU!
+  
+  WAIT....
+  
+  WHERE'S MY SPECIAL MOVE??
+djcutman_opening: "I'm pretty sharp - you better watch out!"
+djcutman_taunt: "It's ok to give up if your mind's getting dull!"
+djcutman_win: "I guess I'm just a cut above you!"
+djcutman_lose: "I've been shredded to pieces!"
+martin_opening: "Just fifteen minutes could save you 15% or more on your car insurance!"
+martin_taunt: "I don't get a big enough commission for this..."
+martin_win: "It's just that easy with Geico!"
+martin_lose: "Good thing the company sent me instead of the caveman... He doesn't take losing well."
+picard_opening: "Are you ready to boldly go where no one has gone before?"
+picard_taunt: "Highly illogical."
+picard_win: "Live long and prosper!"
+picard_lose: "It is possible to commit no errors and still lose. That is not a weakness. That is life."
+glassjoe_opening: "Do I have time to take a nap before the match?"
+glassjoe_taunt: "My doctor declared that you are bad for my health."
+glassjoe_win: "I won! There really is a first time for everything!"
+glassjoe_lose: "Finally, I can retire."
+glados_opening: |
+  Welcome to the Apeture Science Rock, Paper, Scissors, Lizard, Spock enrichment game!
+  Keep in mind that although fun and learning are the primary goal, serious injuries may occur.
+  Please cooperate as the enrichment experiment test progresses.
+glados_taunt: "Good job! As part of a required test protocol, we will stop enhancing the truth in 3..2..1."
+glados_win: |
+  Congratulations! The test is now over. 
+  
+  Do not feel bad about losing - I was reading your inputs as part of the experiment protocol.
+
+  My hypothesis that you could not win was proven correct.
+
+  The experimentation team will be sending a cake to your location as a consolation prize.
+glados_lose: "The test is over. You won, cheater. Go have some cake."
+zenos_opening: |
+  I pray this battle doesn't disappoint me.
+  
+  Go on, then. Try and strike me down in this forsaken place. I shall return the favor.
+zenos_taunt: "Come. 'Twas plain from the first how this would end."
+zenos_win: "Unfortunately disappointing."
+zenos_lose: "Truly an exhilirating battle...!"
+bmo_opening: "WhO wAnTs To PlAy ViDeO gAmEs?"
+bmo_taunt: "I aM iNcApAbLe Of EmOtIoN, bUt YoU aRe MaKiNg Me ChAfEd!"
+bmo_win: "ThIs *DOES* cOmPuTe!"
+bmo_lose: "I fEeL lIkE i GoT hIt WiTh A dRaCuLa By KiNg KoNg."
+announcer_opening_1: "Before the match begins, we'll let the competators make opening statements! I hope the audience is wearing oven mits, because things are about to get HEATED!"
+announcer_opening_2: "Ok folks, let's get this game started!"
+announcer_response_1: "I see, you're the strong but silent type!"
+announcer_response_2: "Wow, quite the verbose orator! But here our hands do the talking, not our mouths!"
+announcer_response_3: "Well said, that'll make your opponent shake in their boots!"
