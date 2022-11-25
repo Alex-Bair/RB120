@@ -8,6 +8,8 @@ welcome: |
   Rules can be found at: https://web.archive.org/web/20181217114425/http://www.samkass.com/theories/RPSSL.html
   
   Press [ENTER] to start!
+choose_name: "What's your name?"
+invalid_name: "Invalid name, you must enter a non-empty value with at least one non-space character."
 choose_opponent: "Please choose your opponent by typing their name, or type 'random' to randomly select an opponent:"
 invalid_opponent: "Invalid opponent. Please type in a valid opponent."
 choose_move: "Please choose rock (r), paper (p), scissors (sc), lizard (l), or spock (sp):"
