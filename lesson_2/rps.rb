@@ -3,7 +3,6 @@ To do:
 - check flow of game & determine when to have sleeps and how long & when to clear screen
 - review interface
 - do full runs of all different opponents
-- add the option to randomly choose the opponent
 - rubocop program
 
 Ask LS Slack question about how Ruby looks up constants for child and parent classes.
@@ -165,7 +164,7 @@ class Computer < Player
   end
 
   def choose_random
-    self.move = USER_INPUT_CONVERSION[(USER_INPUT_CONVERSION.keys.sample)]
+    self.move = USER_INPUT_CONVERSION.values.sample
   end
 
   def prompt(message)
@@ -404,10 +403,12 @@ class RPSGame
       prompt(MESSAGES['choose_opponent'])
       list_opponents
       input = gets.chomp.downcase
-      break if OPPONENTS.key?(input)
+      break if OPPONENTS.key?(input) || input == 'random'
       prompt(MESSAGES['invalid_opponent'])
     end
-    @computer = OPPONENTS[input]
+    @computer = OPPONENTS[input] ? OPPONENTS[input] : OPPONENTS.values.sample
+    prompt("Your opponent is #{computer}.")
+    pause
   end
 
   def list_opponents
