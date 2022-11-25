@@ -1,16 +1,8 @@
 =begin
 To do:
 - check flow of game & determine when to have sleeps and how long & when to clear screen
-- review interface
 - do full runs of all different opponents
 - rubocop program
-
-Ask LS Slack question about how Ruby looks up constants for child and parent classes.
-See exploration_space.rb and
-https://stackoverflow.com/questions/48817287/accessing-a-childs-constant-from-the-parents-class
-https://stackoverflow.com/questions/9949655/get-child-constant-in-parent-method-ruby
-for examples of what I'm talking about.
-
 =end
 
 require 'yaml'
@@ -109,7 +101,7 @@ class Player
     'sp' => Spock.new
   }
 
-  attr_accessor :move, :name, :score, :move_history
+  attr_accessor :move, :name, :score
 
   def initialize
     set_name
@@ -134,27 +126,26 @@ class Human < Player
       prompt("What's your name?")
       n = gets.chomp
       break unless n.empty?
-      prompt("Sorry, must enter a value.")
+      prompt("Sorry, you must enter a value.")
     end
     self.name = n
     puts
   end
 
+  def set_opening
+    print "#{name}: "
+    @opening = gets.chomp.strip
+  end
+
   def choose
     choice = nil
-
     loop do
       prompt(MESSAGES['choose_move'])
       choice = gets.chomp
       break if USER_INPUT_CONVERSION.include?(choice)
-      prompt("Sorry, invalid choice.")
+      prompt(MESSAGES['invalid_move'])
     end
-
     self.move = USER_INPUT_CONVERSION[choice]
-  end
-
-  def set_opening
-    @opening = gets.chomp.strip
   end
 end
 
@@ -163,12 +154,30 @@ class Computer < Player
     @name = self.class.to_s
   end
 
-  def choose_random
-    self.move = USER_INPUT_CONVERSION.values.sample
+  def opening
+    yaml_key = self.class.to_s.downcase + "_opening"
+    prompt(MESSAGES[yaml_key])
   end
 
+  def taunt
+    yaml_key = self.class.to_s.downcase + "_taunt"
+    prompt(MESSAGES[yaml_key])
+  end
+
+  def win
+    yaml_key = self.class.to_s.downcase + "_win"
+    prompt(MESSAGES[yaml_key])
+  end
+
+  def lose
+    yaml_key = self.class.to_s.downcase + "_lose"
+    prompt(MESSAGES[yaml_key])
+  end
+
+  private
+
   def prompt(message)
-    puts "#{@name} => #{message}"
+    puts "#{@name}: #{message}"
   end
 
   def choose_rock
@@ -192,31 +201,15 @@ class Computer < Player
   end
 
   def choose_losing_move(human_move)
-    self.move = human_move.class::WINS_AGAINST[0]
+    self.move = human_move.class::WINS_AGAINST.sample
   end
 
   def choose_winning_move(human_move)
-    self.move = human_move.class::LOSES_AGAINST[0]
+    self.move = human_move.class::LOSES_AGAINST.sample
   end
 
-  def opening
-    yaml_key = self.class.to_s.downcase + "_opening"
-    prompt(MESSAGES[yaml_key])
-  end
-
-  def taunt
-    yaml_key = self.class.to_s.downcase + "_taunt"
-    prompt(MESSAGES[yaml_key])
-  end
-
-  def win
-    yaml_key = self.class.to_s.downcase + "_win"
-    prompt(MESSAGES[yaml_key])
-  end
-
-  def lose
-    yaml_key = self.class.to_s.downcase + "_lose"
-    prompt(MESSAGES[yaml_key])
+  def choose_random
+    self.move = USER_INPUT_CONVERSION.values.sample
   end
 end
 
@@ -291,12 +284,12 @@ class BMO < Computer
 end
 
 class MoveHistory
-  attr_accessor :history
-
   ROUND_COL_SIZE = 11
   HUMAN_COL_SIZE = 15
   COMP_COL_SIZE = 15
   TABLE_WIDTH = ROUND_COL_SIZE + HUMAN_COL_SIZE + COMP_COL_SIZE + 2
+
+  attr_reader :history
 
   def initialize
     @history = Hash.new
@@ -317,6 +310,8 @@ class MoveHistory
     display_round_lines
     display_top_bottom_line
   end
+
+  private
 
   def display_title
     puts "MOVE HISTORY".center(TABLE_WIDTH + 2)
@@ -352,7 +347,6 @@ class MoveHistory
   end
 end
 
-# Game Orchestration Engine
 class RPSGame
   include Promptable
 
@@ -379,7 +373,10 @@ class RPSGame
 
   TAUNT_ROUND = 7
 
-  attr_accessor :human, :computer, :round, :history
+  DEFAULT_PAUSE_DURATION = 2
+
+  attr_accessor :round
+  attr_reader :history, :human, :computer
 
   def initialize
     display_welcome_message
@@ -389,57 +386,45 @@ class RPSGame
     @history = MoveHistory.new
   end
 
-  def increase_round
-    @round += 1
+  def reset
+    [human.score, computer.score, history].each(&:reset)
+    @round = 0
+    choose_opponent
+    pregame_phase
   end
 
-  def record_moves
-    history.record(round, human.move.to_s, computer.move.to_s)
+  def clear_screen
+    system 'clear'
   end
 
-  def choose_opponent
-    input = ''
-    loop do
-      prompt(MESSAGES['choose_opponent'])
-      list_opponents
-      input = gets.chomp.downcase
-      break if OPPONENTS.key?(input) || input == 'random'
-      prompt(MESSAGES['invalid_opponent'])
-    end
-    @computer = OPPONENTS[input] ? OPPONENTS[input] : OPPONENTS.values.sample
-    prompt("Your opponent is #{computer}.")
-    pause
-  end
-
-  def list_opponents
-    OPPONENTS.each_value do |opponent|
-      puts "- #{opponent.name}"
-    end
+  def pause(duration = DEFAULT_PAUSE_DURATION)
+    sleep duration
   end
 
   def display_welcome_message
-    system 'clear'
+    clear_screen
     prompt(MESSAGES['welcome'])
     gets
+    clear_screen
   end
 
   def display_header
     clear_screen
-    puts "========== R O U N D  #{round} =========="
+    puts "================ R O U N D  #{round.to_s.center(2)} ================"
     display_score
     puts
   end
 
   def display_round_over_header
     clear_screen
-    puts "========== R O U N D  #{round}  O V E R =========="
+    puts "============ R O U N D  #{round.to_s.center(2)}  O V E R ==========="
     display_score
     puts
   end
 
   def display_game_over_header
     clear_screen
-    puts "========== G A M E  O V E R =========="
+    puts "============== G A M E  O V E R ==============="
     display_score
     puts
   end
@@ -448,16 +433,22 @@ class RPSGame
     prompt(MESSAGES['goodbye'])
   end
 
-  def display_moves
-    prompt("#{human} chose #{human.move}.")
-    prompt("#{computer} chose #{computer.move}.")
-    pause
-  end
-
   def display_score
     human_output = "#{human}'s score: #{human.score}"
     computer_output = "#{computer}'s score: #{computer.score}"
     puts "#{human_output}   #{computer_output}"
+  end
+
+  def display_move_history
+    history.display(computer.name)
+    puts
+    pause
+  end
+
+  def display_moves
+    prompt("#{human} chose #{human.move}.")
+    prompt("#{computer} chose #{computer.move}.")
+    pause
   end
 
   def display_round_winner
@@ -471,6 +462,45 @@ class RPSGame
     pause
   end
 
+  def display_overall_winner
+    winner = human.win? ? human : computer
+    puts "#{winner} reached #{Score::WINNING_SCORE} points and won the game!"
+  end
+
+  def choose_opponent
+    clear_screen
+    input = opponent_input_loop
+    @computer = OPPONENTS[input] || OPPONENTS.values.sample
+    prompt("Your opponent is #{computer}.")
+    pause
+  end
+
+  def opponent_input_loop
+    input = ''
+    loop do
+      prompt(MESSAGES['choose_opponent'])
+      list_opponents
+      input = gets.chomp.downcase
+      break if OPPONENTS.key?(input) || input == 'random'
+      prompt(MESSAGES['invalid_opponent'])
+    end
+    input
+  end
+
+  def list_opponents
+    OPPONENTS.each_value do |opponent|
+      puts "- #{opponent.name}"
+    end
+  end
+
+  def increase_round
+    self.round += 1
+  end
+
+  def record_moves
+    history.record(round, human.move.to_s, computer.move.to_s)
+  end
+
   def update_score_and_history
     if human.move > computer.move
       human.score.increase
@@ -480,61 +510,60 @@ class RPSGame
     record_moves
   end
 
-  def reset
-    [human.score, computer.score, history].each(&:reset)
-    @round = 0
-    choose_opponent
-  end
-
   def winning_score?
     human.score.win? || computer.score.win?
   end
 
-  def display_overall_winner
-    winner = human.win? ? human : computer
-    puts "#{winner} reached #{Score::WINNING_SCORE} points and won the game!"
-  end
-
   def play_again?
     answer = nil
-
     loop do
-      puts MESSAGES['play_again?']
+      prompt(MESSAGES['play_again?'])
       answer = gets.chomp
       break if ['y', 'n'].include?(answer.downcase)
-      answer == 'history' ? display_move_history : puts(MESSAGES['bad_input'])
+      play_again_history_check(answer)
     end
-
     answer.downcase == 'y'
   end
 
-  def clear_screen
-    system 'clear'
-  end
-
-  def pause(duration = 1.5)
-    sleep duration
+  def play_again_history_check(answer)
+    if answer == 'history'
+      display_game_over_header
+      display_move_history
+    else
+      prompt(MESSAGES['bad_input'])
+    end
   end
 
   def quit_early?
     answer = nil
     loop do
-      puts MESSAGES['quit_early?']
+      prompt(MESSAGES['quit_early?'])
       answer = gets.chomp
       break unless answer == 'history'
+      display_round_over_header
       display_move_history
     end
     VALID_QUITS.include?(answer)
   end
 
-  def display_move_history
-    history.display(computer.name)
+  def pregame_phase
+    human_opening_phase
+    computer_opening_phase
+    game_start_announcement
+  end
+
+  def human_opening_phase
+    clear_screen
+    prompt(MESSAGES['announcer_opening_1'])
+    prompt("#{human}, do you have anything to say to #{computer}?")
     puts
-    pause
+    human.set_opening
+    puts
+    announcer_response_to_human_opening
+    pause(4)
   end
 
   def announcer_response_to_human_opening
-    clear_screen
     human_opening_length = human.opening.length
     if human_opening_length == 0
       prompt(MESSAGES['announcer_response_1'])
@@ -545,34 +574,38 @@ class RPSGame
     end
   end
 
-  def human_opening_phase
-    clear_screen
-    prompt(MESSAGES['announcer_opening_1'])
-    prompt("#{human}, do you have anything to say to #{computer}?")
-    human.set_opening
-    announcer_response_to_human_opening
-    pause(5)
-  end
-
   def computer_opening_phase
     clear_screen
-    prompt("#{computer}, are you going to take that lying down? What's your response?")
-    pause(5)
-    clear_screen
+    prompt(computer.to_s + MESSAGES['announcer_prompt_computer'])
+    pause(4)
+    puts
     computer.opening
-    pause(5)
+    puts
+    pause(4)
   end
 
   def game_start_announcement
-    clear_screen
     prompt(MESSAGES['announcer_opening_2'])
-    pause(5)
+    gets
   end
 
-  def pregame_phase
-    human_opening_phase
-    computer_opening_phase
-    game_start_announcement
+  def main_game_phase_loop
+    loop do
+      round_phase
+      if winning_score?
+        endgame_phase
+        break unless play_again?
+        reset
+      elsif quit_early?
+        break
+      end
+    end
+  end
+
+  def round_phase
+    move_phase
+    endround_phase
+    taunt_phase if round == TAUNT_ROUND
   end
 
   def move_phase
@@ -589,40 +622,31 @@ class RPSGame
     display_round_winner
   end
 
-  def endgame_phase
-    display_game_over_header
-    display_overall_winner
-    prompt("It looks like #{computer} has some final words!")
-    computer.win? ? computer.win : computer.lose
-  end
-
   def taunt_phase
-    prompt "Looks like #{computer} has something to say to you! Could they be...taunting you?"
+    prompt("Sounds like #{computer}" + MESSAGES['announcer_prompt_taunt'])
+    pause
+    puts
     computer.taunt
+    puts
     pause(5)
   end
 
-  def round_phase
-    move_phase
-    endround_phase
-    taunt_phase if round == TAUNT_ROUND
-  end
-
-  def main_game_phase_loop
-    loop do
-      round_phase
-      if winning_score?
-        endgame_phase
-        break unless play_again?
-        reset
-      elsif quit_early?
-        break
-      end
-    end
+  def endgame_phase
+    display_game_over_header
+    display_overall_winner
+    pause
+    prompt("It looks like #{computer} has some final words!")
+    puts
+    pause
+    computer.win? ? computer.win : computer.lose
+    puts
+    pause
   end
 
   def postgame_phase
+    display_game_over_header
     display_goodbye_message
+    pause
   end
 
   def play

@@ -11,6 +11,7 @@ welcome: |
 choose_opponent: "Please choose your opponent by typing their name, or type 'random' to randomly select an opponent:"
 invalid_opponent: "Invalid opponent. Please type in a valid opponent."
 choose_move: "Please choose rock (r), paper (p), scissors (sc), lizard (l), or spock (sp):"
+invalid_move: "Invalid chice. Please provide a valid move."
 goodbye: "Thanks for playing Rock, Paper, Scissors, Lizard, Spock. Goodbye!"
 tie: "It's a tie!"
 play_again?: "Would you like to play again? (y/n). Type 'history' for move history."
@@ -26,9 +27,9 @@ papyrus_win: "ANOTHER DECISIVE VICTORY FOR PAPYRUS!"
 papyrus_lose: |
   YOU ARE LUCKY! IF I HAD USED MY SPECIAL MOVE, IT WOULD HAVE BEEN ALL OVER FOR YOU!
   
-  WAIT....
+  Papyrus: WAIT....
   
-  WHERE'S MY SPECIAL MOVE??
+  Papyrus: WHERE'S MY SPECIAL MOVE??
 djcutman_opening: "I'm pretty sharp - you better watch out!"
 djcutman_taunt: "It's ok to give up if your mind's getting dull!"
 djcutman_win: "I guess I'm just a cut above you!"
@@ -46,23 +47,23 @@ glassjoe_taunt: "My doctor declared that you are bad for my health."
 glassjoe_win: "I won! There really is a first time for everything!"
 glassjoe_lose: "Finally, I can retire."
 glados_opening: |
-  Welcome to the Apeture Science Rock, Paper, Scissors, Lizard, Spock enrichment game!
-  Keep in mind that although fun and learning are the primary goal, serious injuries may occur.
-  Please cooperate as the enrichment experiment test progresses.
+  Welcome to the Apeture Science Rock, Paper, Scissors, Lizard, Spock enrichment experiment!
+
+  GLaDOS: Keep in mind that although fun and learning are the primary goal, serious injuries may occur.
 glados_taunt: "Good job! As part of a required test protocol, we will stop enhancing the truth in 3..2..1."
 glados_win: |
-  Congratulations! The test is now over. 
-  
-  Do not feel bad about losing - I was reading your inputs as part of the experiment protocol.
+  Congratulations! The test is now over.
 
-  My hypothesis that you could not win was proven correct.
+  GLaDOS: Do not feel bad about losing - I was reading your inputs as part of the experiment protocol.
 
-  The experimentation team will be sending a cake to your location as a consolation prize.
+  GLaDOS: My hypothesis that you could not win was proven correct.
+
+  GLaDOS: The experimentation team will be sending a cake to your location as a consolation prize.
 glados_lose: "The test is over. You won, cheater. Go have some cake."
 zenos_opening: |
   I pray this battle doesn't disappoint me.
   
-  Go on, then. Try and strike me down in this forsaken place. I shall return the favor.
+  Zenos: Go on, then. Try and strike me down in this forsaken place. I shall return the favor.
 zenos_taunt: "Come. 'Twas plain from the first how this would end."
 zenos_win: "Unfortunately disappointing."
 zenos_lose: "Truly an exhilirating battle...!"
@@ -70,8 +71,10 @@ bmo_opening: "WhO wAnTs To PlAy ViDeO gAmEs?"
 bmo_taunt: "I aM iNcApAbLe Of EmOtIoN, bUt YoU aRe MaKiNg Me ChAfEd!"
 bmo_win: "ThIs *DOES* cOmPuTe!"
 bmo_lose: "I fEeL lIkE i GoT hIt WiTh A dRaCuLa By KiNg KoNg."
-announcer_opening_1: "Before the match begins, we'll let the competators make opening statements! I hope the audience is wearing oven mits, because things are about to get HEATED!"
-announcer_opening_2: "Ok folks, let's get this game started!"
-announcer_response_1: "I see, you're the strong but silent type!"
+announcer_opening_1: "Before the match begins, we'll let the competitors make opening statements! I hope the audience is wearing oven mits, because things are about to get HEATED!"
+announcer_opening_2: "Ok folks, let's get this game started! Press [ENTER] to continue."
+announcer_response_1: "I see, you're the strong and silent type!"
 announcer_response_2: "Wow, quite the verbose orator! But here our hands do the talking, not our mouths!"
 announcer_response_3: "Well said, that'll make your opponent shake in their boots!"
+announcer_prompt_computer: ", are you going to take that lying down? What's your response?"
+announcer_prompt_taunt: " has something to say to you! Could they be...taunting you?"
