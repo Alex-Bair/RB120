@@ -1,9 +1,3 @@
-=begin
-To do:
-- do full runs of all different opponents
-- rubocop program
-=end
-
 require 'yaml'
 
 module Promptable
@@ -92,7 +86,11 @@ module GameplayDisplayable
 
   def display_welcome_message
     clear_screen
-    prompt(MESSAGES['welcome'])
+    puts(MESSAGES['welcome_p1'])
+    puts
+    puts(MESSAGES['welcome_p2'] + " #{Score::WINNING_SCORE} points first!")
+    puts
+    puts(MESSAGES['press_enter'])
     gets
     clear_screen
   end
@@ -138,7 +136,7 @@ module GameplayDisplayable
 
   def display_overall_winner
     winner = human.win? ? human : computer
-    puts "#{winner} reached #{Score::WINNING_SCORE} points and won the game!"
+    prompt("#{winner} earned #{Score::WINNING_SCORE} points and won the game!")
   end
 
   def display_goodbye_message
@@ -230,27 +228,32 @@ module Moves
 
   class Rock < Move
     WINS_AGAINST = ['scissors', 'lizard']
+    LOSES_AGAINST = ['paper', 'spock']
   end
 
   class Paper < Move
     WINS_AGAINST = ['rock', 'spock']
+    LOSES_AGAINST = ['scissors', 'lizard']
   end
 
   class Scissors < Move
     WINS_AGAINST = ['paper', 'lizard']
+    LOSES_AGAINST = ['rock', 'spock']
   end
 
   class Lizard < Move
     WINS_AGAINST = ['spock', 'paper']
+    LOSES_AGAINST = ['rock', 'scissors']
   end
 
   class Spock < Move
     WINS_AGAINST = ['scissors', 'rock']
+    LOSES_AGAINST = ['lizard', 'paper']
   end
 end
 
 class Score
-  WINNING_SCORE = 10
+  WINNING_SCORE = 4
   STARTING_SCORE = 0
 
   attr_reader :score
@@ -274,6 +277,8 @@ class Score
   def <=>(other_score)
     score <=> other_score.score
   end
+
+  private
 
   def to_s
     @score.to_s
@@ -407,11 +412,13 @@ module Players
     end
 
     def choose_losing_move(human_move)
-      self.move = human_move.class::WINS_AGAINST.sample
+      move_key = human_move.class::WINS_AGAINST.sample
+      self.move = USER_INPUT_CONVERSION[move_key]
     end
 
     def choose_winning_move(human_move)
-      self.move = human_move.class::LOSES_AGAINST.sample
+      move_key = human_move.class::LOSES_AGAINST.sample
+      self.move = USER_INPUT_CONVERSION[move_key]
     end
 
     def choose_random
@@ -547,15 +554,15 @@ class RPSGame
   include GameplayDisplayable
 
   OPPONENTS = {
+    'glass joe' => Players::NPCs::GlassJoe.new,
     'rockman' => Players::NPCs::Rockman.new,
     'papyrus' => Players::NPCs::Papyrus.new,
     'dj cutman' => Players::NPCs::DJCutman.new,
     'martin' => Players::NPCs::Martin.new,
     'picard' => Players::NPCs::Picard.new,
-    'glass joe' => Players::NPCs::GlassJoe.new,
-    'glados' => Players::NPCs::Glados.new,
+    'bmo' => Players::NPCs::BMO.new,
     'zenos' => Players::NPCs::Zenos.new,
-    'bmo' => Players::NPCs::BMO.new
+    'glados' => Players::NPCs::Glados.new
   }
 
   TAUNT_ROUND = Score::WINNING_SCORE / 2
@@ -608,12 +615,12 @@ class RPSGame
   end
 
   def pregame_phase
-    human_opening_phase
-    computer_opening_phase
+    human_opening_subphase
+    computer_opening_subphase
     display_game_start_announcement
   end
 
-  def human_opening_phase
+  def human_opening_subphase
     clear_screen
     prompt(MESSAGES['announcer_opening_1'])
     prompt("#{human}, do you have anything to say to #{computer}?")
@@ -624,7 +631,7 @@ class RPSGame
     pause(4)
   end
 
-  def computer_opening_phase
+  def computer_opening_subphase
     clear_screen
     prompt(computer.to_s + MESSAGES['announcer_prompt_computer'])
     pause(4)
@@ -636,9 +643,9 @@ class RPSGame
 
   def main_game_phase_loop
     loop do
-      round_phase
+      round_subphase
       if winning_score?
-        endgame_phase
+        endgame_subphase
         break unless play_again?
         reset
       elsif quit_early?
@@ -647,13 +654,13 @@ class RPSGame
     end
   end
 
-  def round_phase
-    move_phase
-    endround_phase
-    taunt_phase if round == TAUNT_ROUND
+  def round_subphase
+    move_subphase
+    endround_subphase
+    taunt_subphase if round == TAUNT_ROUND
   end
 
-  def move_phase
+  def move_subphase
     increase_round
     display_header
     human.choose
@@ -661,13 +668,13 @@ class RPSGame
     display_moves
   end
 
-  def endround_phase
+  def endround_subphase
     update_score_and_history
     display_round_over_header
     display_round_winner
   end
 
-  def taunt_phase
+  def taunt_subphase
     prompt("Sounds like #{computer}" + MESSAGES['announcer_prompt_taunt'])
     pause
     puts
@@ -676,7 +683,7 @@ class RPSGame
     pause(5)
   end
 
-  def endgame_phase
+  def endgame_subphase
     display_game_over_header
     display_overall_winner
     pause

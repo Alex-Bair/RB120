@@ -1,16 +1,14 @@
-welcome: |
+welcome_p1: |
   Welcome to Rock, Paper, Scissors, Lizard, Spock (RPSLS)! 
   
   You'll be playing against an opponent of your choosing.
-  
-  Each round will be worth one point, and the winner is whoever reaches 10 points first!
-  
+
   Rules can be found at: https://web.archive.org/web/20181217114425/http://www.samkass.com/theories/RPSSL.html
-  
-  Press [ENTER] to start!
+welcome_p2: "Each round will be worth one point, and the winner is whoever reaches"
+press_enter: "Press [ENTER] to start!"
 choose_name: "What's your name?"
 invalid_name: "Invalid name, you must enter a non-empty value with at least one non-space character."
-choose_opponent: "Please choose your opponent by typing their name, or type 'random' to randomly select an opponent:"
+choose_opponent: "Please choose your opponent by typing their name, or type 'random' to randomly select an opponent. Opponents are listed in order of increasing difficulty."
 invalid_opponent: "Invalid opponent. Please type in a valid opponent."
 choose_move: "Please choose rock (r), paper (p), scissors (sc), lizard (l), or spock (sp):"
 invalid_move: "Invalid chice. Please provide a valid move."
@@ -52,13 +50,14 @@ glados_opening: |
   Welcome to the Apeture Science Rock, Paper, Scissors, Lizard, Spock enrichment experiment!
 
   GLaDOS: Keep in mind that although fun and learning are the primary goal, serious injuries may occur.
-glados_taunt: "Good job! As part of a required test protocol, we will stop enhancing the truth in 3..2..1."
+glados_taunt: |
+  Good job! 
+  
+  GLaDOS: As part of a required test protocol, we will stop enhancing the truth in 3..2..1.
 glados_win: |
   Congratulations! The test is now over.
 
   GLaDOS: Do not feel bad about losing - I was reading your inputs as part of the experiment protocol.
-
-  GLaDOS: My hypothesis that you could not win was proven correct.
 
   GLaDOS: The experimentation team will be sending a cake to your location as a consolation prize.
 glados_lose: "The test is over. You won, cheater. Go have some cake."
