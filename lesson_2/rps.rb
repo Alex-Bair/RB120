@@ -160,8 +160,8 @@ module Inputable
     answer = nil
     loop do
       prompt(MESSAGES['play_again?'])
-      answer = gets.chomp
-      break if ['y', 'n'].include?(answer.downcase)
+      answer = gets.chomp.downcase
+      break if ['y', 'n'].include?(answer)
       play_again_history_check(answer)
     end
     answer.downcase == 'y'
@@ -180,7 +180,7 @@ module Inputable
     answer = nil
     loop do
       prompt(MESSAGES['quit_early?'])
-      answer = gets.chomp
+      answer = gets.chomp.downcase
       break unless answer == 'history'
       display_round_over_header
       display_move_history
@@ -335,7 +335,7 @@ module Players
       choice = nil
       loop do
         prompt(MESSAGES['choose_move'])
-        choice = gets.chomp
+        choice = gets.chomp.downcase
         break if USER_INPUT_CONVERSION.include?(choice)
         prompt(MESSAGES['invalid_move'])
       end
