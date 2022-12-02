@@ -2,7 +2,7 @@
 To do:
 
 - allow difficulty settings
-- allow player to pick any marker
+- allow player to pick any marker (can I use the Module#const_set method for this?)
   - implies that the computer cannot pick the marker the player picked
 - allow player to input a name
   - give computer a name
@@ -224,8 +224,6 @@ end
 
 class TTTGame
   def play
-    clear_screen
-    display_welcome_message
     main_gameplay_loop
     display_goodbye_message
   end
@@ -259,20 +257,46 @@ class TTTGame
 
   HUMAN_MARKER = 'X'
   COMPUTER_MARKER = 'O'
-  FIRST_TO_MOVE = HUMAN_MARKER
   VALID_YES = ['y', 'yes']
   VALID_NO = ['n', 'no']
   VALID_INPUTS = VALID_YES + VALID_NO
+  VALID_FIRST_TURNS = [1, 2, 3]
 
   attr_reader :board, :human, :computer, :quit_early
 
   def initialize
+    display_welcome_message
     @board = Board.new
+    #set_markers
     @human = Player.new(HUMAN_MARKER)
     @computer = Computer.new(COMPUTER_MARKER)
+    set_first_to_move
     @current_marker = FIRST_TO_MOVE
     @quit_early = false
     @winner = nil
+  end
+
+  def set_constant(name, value)
+    self.class.const_set(name, value)
+  end
+
+  def set_first_to_move
+    puts "Who would you like to move first? (1, 2, or 3)"
+    puts "1 - You"
+    puts "2 - Computer"
+    puts "3 - Let the computer decide"
+    answer = nil
+    loop do
+      answer = gets.chomp.to_i
+      break if VALID_FIRST_TURNS.include?(answer)
+      puts "Invalid choice. Please enter 1, 2, or 3."
+    end
+    marker =  case answer
+              when 1 then HUMAN_MARKER
+              when 2 then COMPUTER_MARKER
+              else [HUMAN_MARKER, COMPUTER_MARKER].sample
+              end
+    set_constant('FIRST_TO_MOVE', marker)
   end
 
   def scoring_gameplay_loop
@@ -302,7 +326,8 @@ class TTTGame
     system "clear"
   end
 
-  def display_welcome_message
+  def display_welcome_message #need to significantly build out welcome message
+    clear_screen
     puts "Welcome to Tic Tac Toe!"
     puts
   end
@@ -371,7 +396,7 @@ class TTTGame
     board[square] = human.marker
   end
 
-  def computer_moves #need to pass in both open winning spots and open spots to computer strategy (let computer make all decisions)
+  def computer_moves
     board.determine_open_winning_spots
     spot = computer.spot_selection(board.unmarked_keys, board.open_winning_spots)
     board[spot] = computer.marker
@@ -392,7 +417,7 @@ class TTTGame
   end
 
   def quit?
-    answer = get_input("Would you like to give up? (y/n)")
+    answer = get_yes_or_no("Would you like to give up? (y/n)")
 
     @quit_early = true if VALID_YES.include?(answer)
 
@@ -400,12 +425,12 @@ class TTTGame
   end
 
   def play_again?
-    answer = get_input("Would you like to play again? (y/n)")
+    answer = get_yes_or_no("Would you like to play again? (y/n)")
 
     VALID_YES.include?(answer)
   end
 
-  def get_input(prompt_string)
+  def get_yes_or_no(prompt_string)
     loop do
       puts prompt_string
       answer = gets.chomp.downcase
