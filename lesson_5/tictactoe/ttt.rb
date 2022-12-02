@@ -1,12 +1,11 @@
 =begin
 To do:
 
-- allow difficulty settings
-- allow player to pick any marker (can I use the Module#const_set method for this?)
-  - implies that the computer cannot pick the marker the player picked
-- allow player to input a name
-  - give computer a name
+- allow difficulty settings?
 - display rules and grid schematic during welcome message
+- refactor where possible
+- test all possible inputs (empty spaces? lowercase vs uppercase?)
+- access modifiers
 =end
 
 require 'pry'
@@ -168,23 +167,43 @@ class Score
 end
 
 class Player
-  attr_reader :marker, :score
+  attr_reader :marker, :score, :name
 
   def initialize(mark)
     @marker = mark
     @score = Score.new
+    set_name
   end
 
   def win?
     score.winning_score?
   end
-  
+
+  def set_name
+    n = ''
+    loop do
+      puts "What's your name?"
+      n = gets.chomp.strip
+      break unless n.empty?
+      puts "Invalid name, you must enter a non-empty value with at least one non-space character."
+    end
+    @name = n
+    puts
+  end
+
   def to_s
     "test_player" #update to be the name of the player once implemented
   end
 end
 
 class Computer < Player
+  POTENTIAL_COMPUTER_NAMES = ["N64", "PS2", "PC", "GBC", "NDS", "GC"]
+
+
+  def set_name
+    @name = POTENTIAL_COMPUTER_NAMES.sample
+  end
+  
   def player_winning_spot?(open_winning_spots)
     !!defensive_move(open_winning_spots)
   end
@@ -230,7 +249,7 @@ class TTTGame
 
   def main_gameplay_loop
     loop do
-      # determine settings (difficulty, marker)
+      # determine settings (difficulty)
       scoring_gameplay_loop
       determine_winner
       display_endgame
@@ -314,7 +333,7 @@ class TTTGame
     puts "3 - Let the computer decide"
     answer = nil
     loop do
-      answer = gets.chomp.to_i
+      answer = gets.chomp.strip.to_i
       break if VALID_FIRST_TURNS.include?(answer)
       puts "Invalid choice. Please enter 1, 2, or 3."
     end
@@ -370,8 +389,8 @@ class TTTGame
   end
 
   def display_status
-    puts "You're #{human.marker}'s       Computer is #{computer.marker}'s"
-    puts "Your score: #{human.score}    Computer's score: #{computer.score}"
+    puts "#{human.name} is #{human.marker}'s        #{computer.name} is #{computer.marker}'s"
+    puts "#{human.name}'s score: #{human.score}    #{computer.name}'s score: #{computer.score}"
   end
 
   def joinor(array, delimiter=", ", final_delim='or')
@@ -416,7 +435,7 @@ class TTTGame
     puts "Choose an empty square (#{joinor(board.unmarked_keys)}): "
     square = nil
     loop do
-      square = gets.chomp.to_i
+      square = gets.chomp.strip.to_i
       break if board.unmarked_keys.include?(square)
       puts "Sorry, that's not a valid choice."
     end
@@ -460,7 +479,7 @@ class TTTGame
   def get_yes_or_no(prompt_string)
     loop do
       puts prompt_string
-      answer = gets.chomp.downcase
+      answer = gets.chomp.strip.downcase
       return answer if VALID_INPUTS.include?(answer)
       puts "Sorry, must be y or n."
     end
