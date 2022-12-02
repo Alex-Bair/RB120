@@ -255,19 +255,18 @@ class TTTGame
 
   private
 
-  HUMAN_MARKER = 'X'
-  COMPUTER_MARKER = 'O'
   VALID_YES = ['y', 'yes']
   VALID_NO = ['n', 'no']
   VALID_INPUTS = VALID_YES + VALID_NO
   VALID_FIRST_TURNS = [1, 2, 3]
+  POTENTIAL_COMPUTER_MARKERS = ['X', 'O']
 
   attr_reader :board, :human, :computer, :quit_early
 
   def initialize
     display_welcome_message
     @board = Board.new
-    #set_markers
+    set_markers
     @human = Player.new(HUMAN_MARKER)
     @computer = Computer.new(COMPUTER_MARKER)
     set_first_to_move
@@ -278,6 +277,34 @@ class TTTGame
 
   def set_constant(name, value)
     self.class.const_set(name, value)
+  end
+
+  def set_markers
+    set_human_marker
+    set_computer_marker
+  end
+
+  def set_computer_marker
+    choices = POTENTIAL_COMPUTER_MARKERS.select do |char|
+      char.downcase != HUMAN_MARKER.downcase
+    end
+    set_constant("COMPUTER_MARKER", choices.sample)
+  end
+
+  def set_human_marker
+    puts "Please enter a single non-space character to represent you on the TicTacToe board."
+    answer = nil
+    loop do
+      answer = gets.chomp.strip
+      break if valid_marker?(answer)
+      puts "Invalid marker. Please enter a single non-space character."
+    end
+
+    set_constant('HUMAN_MARKER', answer)
+  end
+
+  def valid_marker?(string)
+    string.length == 1
   end
 
   def set_first_to_move
@@ -343,8 +370,8 @@ class TTTGame
   end
 
   def display_status
-    puts "You're #{human.marker}s       Computer is #{computer.marker}s"
-    puts "Your score: #{human.score}   Computer's score: #{computer.score}"
+    puts "You're #{human.marker}'s       Computer is #{computer.marker}'s"
+    puts "Your score: #{human.score}    Computer's score: #{computer.score}"
   end
 
   def joinor(array, delimiter=", ", final_delim='or')
