@@ -134,10 +134,12 @@ end
 module Inputable
   VALID_YES = ['y', 'yes']
   VALID_NO = ['n', 'no']
-  VALID_INPUTS = VALID_YES + VALID_NO
+  VALID_YES_AND_NO = VALID_YES + VALID_NO
 
   def quit?
-    answer = get_yes_or_no("Would you like to give up? (y/n)")
+    prompt = "Would you like to give up? (y/n)"
+    error = "Sorry, must be y or n."
+    answer = get_input(prompt, VALID_YES_AND_NO, error)
 
     @quit_early = true if VALID_YES.include?(answer)
 
@@ -145,24 +147,27 @@ module Inputable
   end
 
   def play_again?
-    answer = get_yes_or_no("Would you like to play again? (y/n)")
+    prompt = "Would you like to play again? (y/n)"
+    error = "Sorry, must be y or n."
+    answer = get_input(prompt, VALID_YES_AND_NO, error)
 
     VALID_YES.include?(answer)
   end
 
-  def get_yes_or_no(prompt_string)
+  def get_input(prompt_str, validation_array, error_str)
+    puts prompt_str
+
     loop do
-      puts prompt_string
       answer = gets.chomp.strip.downcase
-      return answer if VALID_INPUTS.include?(answer)
-      puts "Sorry, must be y or n."
+      return answer if validation_array.include?(answer)
+      puts error_str
     end
   end
 end
 
 module Settable
-  VALID_FIRST_TURNS = [1, 2, 3]
-  VALID_DIFFICULTIES = [1, 2, 3]
+  VALID_FIRST_TURNS = ['1', '2', '3']
+  VALID_DIFFICULTIES = ['1', '2', '3']
   POTENTIAL_COMPUTER_MARKERS = ['X', 'O']
 
   def set_constant(name, value)
@@ -174,37 +179,6 @@ module Settable
     set_human_marker
     set_computer_marker
     clear_screen
-  end
-
-  def set_computer_marker
-    choices = POTENTIAL_COMPUTER_MARKERS.select do |char|
-      char.downcase != TTTGame::HUMAN_MARKER.downcase
-    end
-    set_constant("COMPUTER_MARKER", choices.sample)
-  end
-
-  def set_computer_difficulty
-    display_computer_difficulty_prompt
-    answer = nil
-    loop do
-      answer = gets.chomp.delete(' ').to_i
-      break if VALID_DIFFICULTIES.include?(answer)
-      puts "Invalid choice. Please choose #{joinor(VALID_DIFFICULTIES)}"
-    end
-    puts
-    computer.difficulty = answer
-  end
-
-  def display_computer_difficulty_prompt
-    clear_screen
-    text = <<~TXT
-    Please choose a difficulty (#{joinor(VALID_DIFFICULTIES)}):
-
-    1 - Easy
-    2 - Medium
-    3 - Hard
-    TXT
-    puts text
   end
 
   def set_human_marker
@@ -223,34 +197,49 @@ module Settable
     string.length == 1
   end
 
+  def set_computer_marker
+    choices = POTENTIAL_COMPUTER_MARKERS.select do |char|
+      char.downcase != TTTGame::HUMAN_MARKER.downcase
+    end
+    set_constant("COMPUTER_MARKER", choices.sample)
+  end
+
+  def set_computer_difficulty
+    clear_screen
+    err = "Invalid choice. Please choose #{joinor(VALID_DIFFICULTIES)}"
+    computer.difficulty = get_input(difficulty_prompt, VALID_DIFFICULTIES, err)
+    puts
+  end
+
+  def difficulty_prompt
+    <<~TXT
+    Please choose a difficulty (#{joinor(VALID_DIFFICULTIES)}):
+
+    1 - Easy
+    2 - Medium
+    3 - Hard
+    TXT
+  end
+
   def set_first_to_move
-    display_first_to_move_prompt
-    marker =  case first_to_move_input
-              when 1 then TTTGame::HUMAN_MARKER
-              when 2 then TTTGame::COMPUTER_MARKER
+    clear_screen
+    err = "Invalid choice. Please choose #{joinor(VALID_FIRST_TURNS)}"
+    marker =  case get_input(first_to_move_prompt, VALID_FIRST_TURNS, err)
+              when '1' then TTTGame::HUMAN_MARKER
+              when '2' then TTTGame::COMPUTER_MARKER
               else [TTTGame::HUMAN_MARKER, TTTGame::COMPUTER_MARKER].sample
               end
     set_constant('FIRST_TO_MOVE', marker)
   end
 
-  def display_first_to_move_prompt
-    clear_screen
-    text = <<~TXT
+  def first_to_move_prompt
+    <<~TXT
     Who would you like to move first? (#{joinor(VALID_FIRST_TURNS)}})
     
     1 - You
     2 - Computer
     3 - Let the computer decide
     TXT
-    puts text
-  end
-
-  def first_to_move_input
-    loop do
-      answer = gets.chomp.delete(' ').to_i
-      return answer if VALID_FIRST_TURNS.include?(answer)
-      puts "Invalid choice. Please enter #{joinor(VALID_FIRST_TURNS)}."
-    end
   end
 end
 
@@ -262,22 +251,25 @@ module GameElements
                     [[1, 4, 7], [2, 5, 8], [3, 6, 9]] +
                     [[1, 5, 9], [3, 5, 7]]
 
+    # Convention: a 'spot' is the number indicating a 
+    # specific Square object's location on the board.
+
     def initialize
       @squares = {}
       @open_winning_spots = {}
       reset
     end
 
-    def []=(key, marker)
-      @squares[key].marker = marker
+    def []=(spot, marker)
+      @squares[spot].marker = marker
     end
 
-    def unmarked_keys
+    def unmarked_spots
       @squares.keys.select { |key| @squares[key].unmarked? }
     end
 
     def full?
-      unmarked_keys.empty?
+      unmarked_spots.empty?
     end
 
     def someone_won?
@@ -299,7 +291,7 @@ module GameElements
       [TTTGame::HUMAN_MARKER, TTTGame::COMPUTER_MARKER].each do |mark|
         WINNING_LINES.each do |line|
           if winning_spot?(line, mark)
-            @open_winning_spots[mark] = empty_square_key(line)
+            @open_winning_spots[mark] = empty_spot(line)
           end
         end
       end
@@ -338,12 +330,12 @@ module GameElements
       markers.uniq.size == 1
     end
 
-    def empty_square_key(line)
-      line.intersection(unmarked_keys).first
+    def empty_spot(line)
+      line.intersection(unmarked_spots).first
     end
 
     def empty_square?(line)
-      !!empty_square_key(line)
+      !!empty_spot(line)
     end
 
     def exactly_2?(mark, line)
@@ -456,9 +448,9 @@ module Players
 
     def spot_selection(open_spots, open_winning_spots)
       case @difficulty
-      when 1 then easy_mode(open_spots)
-      when 2 then medium_mode(open_spots, open_winning_spots)
-      when 3 then hard_mode(open_spots, open_winning_spots)
+      when '1' then easy_mode(open_spots)
+      when '2' then medium_mode(open_spots, open_winning_spots)
+      when '3' then hard_mode(open_spots, open_winning_spots)
       end
     end
 
@@ -601,11 +593,11 @@ class TTTGame
   end
 
   def human_moves
-    puts "Choose an empty square (#{joinor(board.unmarked_keys)}): "
+    puts "Choose an empty square (#{joinor(board.unmarked_spots)}): "
     square = nil
     loop do
       square = gets.chomp.delete(' ').to_i
-      break if board.unmarked_keys.include?(square)
+      break if board.unmarked_spots.include?(square)
       puts "Sorry, that's not a valid choice."
     end
     board[square] = human.marker
@@ -613,7 +605,7 @@ class TTTGame
 
   def computer_moves
     board.determine_open_winning_spots
-    sp = computer.spot_selection(board.unmarked_keys, board.open_winning_spots)
+    sp = computer.spot_selection(board.unmarked_spots, board.open_winning_spots)
     board[sp] = computer.marker
   end
 
