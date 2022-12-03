@@ -1,13 +1,11 @@
 =begin
 To do:
-
-- display rules and grid schematic during welcome message
-- refactor where possible
-- test all possible inputs (empty spaces? lowercase vs uppercase?)
+- determine when to clear screen
+- test inputs
 - access modifiers
-- modules for similar purpose methods
-- use a YAML for the text?
+- modules for similar purpose methods (Displayable, Inputable(?)) and classes (GameElements, Players)
 - review other TTT LS code reviews for common feedback
+- refactor where possible
 - rubocop
 =end
 
@@ -16,7 +14,7 @@ require 'yaml'
 
 class Board
   attr_reader :open_winning_spots
-  
+
   WINNING_LINES = [[1, 2, 3], [4, 5, 6], [7, 8, 9]] + # rows
                   [[1, 4, 7], [2, 5, 8], [3, 6, 9]] + # columns
                   [[1, 5, 9], [3, 5, 7]] # diagonals
@@ -152,7 +150,7 @@ class Score
   def initialize
     reset
   end
-  
+
   def reset
     @score = STARTING_SCORE
   end
@@ -164,7 +162,7 @@ class Score
   def winning_score?
     @score >= WINNING_SCORE
   end
-  
+
   def to_s
     @score.to_s
   end
@@ -203,13 +201,13 @@ end
 class Computer < Player
   POTENTIAL_COMPUTER_NAMES = ["N64", "PS2", "PC", "GBC", "NDS", "GC"]
   PRIORITIZED_MOVE = 5
-  
+
   attr_accessor :difficulty
 
   def set_name
     @name = POTENTIAL_COMPUTER_NAMES.sample
   end
-  
+
   def player_winning_spot?(open_winning_spots)
     !!defensive_move(open_winning_spots)
   end
@@ -221,11 +219,11 @@ class Computer < Player
   def defensive_move(open_winning_spots)
     open_winning_spots.select {|mark, _| mark != marker}.values.first
   end
-  
+
   def offensive_move(open_winning_spots)
     open_winning_spots[marker]
   end
-  
+
   def random_move(open_spots)
     open_spots.sample
   end
@@ -233,11 +231,11 @@ class Computer < Player
   def at_least_hard_difficulty?
     difficulty >= 3
   end
-  
+
   def at_least_medium_difficulty?
     difficulty >= 2
   end
-  
+
   def easy_mode(open_spots)
     open_spots.sample
   end
@@ -271,13 +269,13 @@ end
 
 class TTTGame
   def play
+    display_opening_message
     main_gameplay_loop
     display_goodbye_message
   end
 
   def main_gameplay_loop
     loop do
-      # determine settings (difficulty)
       scoring_gameplay_loop
       determine_winner
       display_endgame
@@ -298,6 +296,39 @@ class TTTGame
     else
       puts "You quit early!"
     end
+  end
+
+  def display_opening_message
+    clear_screen
+    text = <<~TXT
+    Thanks for being patient and answer those questions!
+
+    You chose to use #{HUMAN_MARKER}'s as your marker.
+
+    You'll be playing against #{computer.name} (your computer!), and they'll be using #{COMPUTER_MARKER}'s as their marker.
+
+    #{FIRST_TO_MOVE}'s will move first.
+
+    First to #{Score::WINNING_SCORE} wins!
+
+    You can quit early after each completed board if #{computer.name} is too difficult.
+
+    Squares will be chosen using the numbering scheme below:
+
+         |     |
+      1  |  2  |  3
+         |     |
+    -----+-----+-----
+         |     |
+      4  |  5  |  6
+         |     |
+    -----+-----+-----
+         |     |
+      7  |  8  |  9
+         |     |
+    TXT
+    puts text
+    wait_for_input
   end
 
   private
@@ -343,19 +374,20 @@ class TTTGame
   def set_computer_difficulty
     text = <<~TXT
     Please choose a difficulty (#{joinor(VALID_DIFFICULTIES)}):
-    
+
     1 - Easy
     2 - Medium
     3 - Hard
     TXT
     puts text
-    
+
     answer = nil
     loop do
-      answer = gets.chomp.strip.to_i
+      answer = gets.chomp.delete(' ').to_i
       break if VALID_DIFFICULTIES.include?(answer)
       puts "Invalid choice. Please choose #{joinor(VALID_DIFFICULTIES)}"
     end
+    puts
     computer.difficulty = answer
   end
 
@@ -367,7 +399,7 @@ class TTTGame
       break if valid_marker?(answer)
       puts "Invalid marker. Please enter a single non-space character."
     end
-
+    puts
     set_constant('HUMAN_MARKER', answer)
   end
 
@@ -382,7 +414,7 @@ class TTTGame
     puts "3 - Let the computer decide"
     answer = nil
     loop do
-      answer = gets.chomp.strip.to_i
+      answer = gets.chomp.delete(' ').to_i
       break if VALID_FIRST_TURNS.include?(answer)
       puts "Invalid choice. Please enter #{joinor(VALID_FIRST_TURNS)}."
     end
@@ -421,14 +453,30 @@ class TTTGame
     system "clear"
   end
 
-  def display_welcome_message #need to significantly build out welcome message
-    clear_screen
-    puts "Welcome to Tic Tac Toe!"
+  def wait_for_input
     puts
+    puts "Press [ENTER] to continue."
+    gets
+  end
+
+  def display_welcome_message
+    clear_screen
+    text = <<~TXT
+    Welcome to TicTacToe!
+    Rules: https://en.wikipedia.org/wiki/Tic-tac-toe
+
+    Before we begin, you'll need to:
+    - select a marker
+    - provide your name
+    - decide the turn order
+    - choose a difficulty
+    TXT
+    puts text
+    wait_for_input
   end
 
   def display_goodbye_message
-    puts "Thanks for playing Tic Tac Toe! Goodbye!"
+    puts "Thanks for playing TicTacToe! Goodbye!"
   end
 
   def display_board
@@ -444,7 +492,7 @@ class TTTGame
 
   def joinor(array, delimiter=", ", final_delim='or')
     cloned_array = array.clone
-  
+
     if array.size < 3
       cloned_array.join(" #{final_delim} ")
     else
@@ -463,9 +511,9 @@ class TTTGame
 
     case board.winning_marker
     when HUMAN_MARKER
-      puts "You won!"
+      puts "#{human.name} won a board!"
     when COMPUTER_MARKER
-      puts "Computer won!"
+      puts "#{computer.name} won a board!"
     else
       puts "It's a tie!"
     end
@@ -473,10 +521,8 @@ class TTTGame
 
   def update_points
     case board.winning_marker
-    when HUMAN_MARKER
-      human.score.increase
-    when COMPUTER_MARKER
-      computer.score.increase
+    when HUMAN_MARKER then human.score.increase
+    when COMPUTER_MARKER then computer.score.increase
     end
   end
 
@@ -484,7 +530,7 @@ class TTTGame
     puts "Choose an empty square (#{joinor(board.unmarked_keys)}): "
     square = nil
     loop do
-      square = gets.chomp.strip.to_i
+      square = gets.chomp.delete(' ').to_i
       break if board.unmarked_keys.include?(square)
       puts "Sorry, that's not a valid choice."
     end
