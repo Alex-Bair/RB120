@@ -1,11 +1,3 @@
-=begin
-To do:
-- review other TTT LS code reviews for common feedback
-- refactor where possible
-=end
-
-require 'pry'
-
 module Displayable
   def clear_screen
     system "clear"
@@ -41,7 +33,7 @@ module Displayable
 
     You chose to use #{TTTGame::HUMAN_MARKER}'s as your marker.
 
-    You'll be playing against #{computer.name}, your computer, and they'll be using #{TTTGame::COMPUTER_MARKER}'s as their marker.
+    You'll be playing against #{computer.name}, and they'll be using #{TTTGame::COMPUTER_MARKER}'s as their marker.
 
     You can quit early after each completed board if #{computer.name} is too difficult.
 
@@ -83,14 +75,16 @@ module Displayable
   end
 
   def display_endgame
-    if @winner
-      puts "#{@winner} won! The score was #{human.score} to #{computer.score}"
+    if winner
+      puts "#{winner} won! The score was #{human.score} to #{computer.score}"
     else
       puts "You quit early!"
+      sleep 1
     end
   end
 
   def display_goodbye_message
+    clear_screen
     puts "Thanks for playing TicTacToe! Goodbye!"
     sleep 1
   end
@@ -105,6 +99,8 @@ module Displayable
     text = <<~TXT
     #{human.name} is #{human.marker}'s        #{computer.name} is #{computer.marker}'s
     #{human.name}'s score: #{human.score}    #{computer.name}'s score: #{computer.score}
+    
+    First to #{GameElements::Score::WINNING_SCORE} points wins!
     TXT
     puts text
   end
@@ -124,11 +120,6 @@ module Displayable
       cloned_array.join(delimiter)
     end
   end
-
-  def display_play_again_message
-    puts "Let's play again!"
-    puts
-  end
 end
 
 module Inputable
@@ -141,7 +132,7 @@ module Inputable
     error = "Sorry, must be y or n."
     answer = get_input(prompt, VALID_YES_AND_NO, error)
 
-    @quit_early = true if VALID_YES.include?(answer)
+    self.quit_early = true if VALID_YES.include?(answer)
 
     quit_early
   end
@@ -234,11 +225,11 @@ module Settable
 
   def first_to_move_prompt
     <<~TXT
-    Who would you like to move first? (#{joinor(VALID_FIRST_TURNS)}})
-    
+    Who would you like to move first? (#{joinor(VALID_FIRST_TURNS)})
+
     1 - You
-    2 - Computer
-    3 - Let the computer decide
+    2 - Opponent
+    3 - Let opponent decide
     TXT
   end
 end
@@ -251,8 +242,8 @@ module GameElements
                     [[1, 4, 7], [2, 5, 8], [3, 6, 9]] +
                     [[1, 5, 9], [3, 5, 7]]
 
-    # Convention: a 'spot' is the number indicating a 
-    # specific Square object's location on the board.
+    # Clarifying convention: a 'spot' is the number indicating
+    # a specific Square object's location on the board.
 
     def initialize
       @squares = {}
@@ -261,11 +252,11 @@ module GameElements
     end
 
     def []=(spot, marker)
-      @squares[spot].marker = marker
+      squares[spot].marker = marker
     end
 
     def unmarked_spots
-      @squares.keys.select { |key| @squares[key].unmarked? }
+      squares.keys.select { |key| squares[key].unmarked? }
     end
 
     def full?
@@ -278,9 +269,9 @@ module GameElements
 
     def winning_marker
       WINNING_LINES.each do |line|
-        squares = @squares.values_at(*line)
-        if three_identical_markers?(squares)
-          return squares.first.marker
+        sqs_in_line = squares.values_at(*line)
+        if three_identical_markers?(sqs_in_line)
+          return sqs_in_line.first.marker
         end
       end
       nil
@@ -291,41 +282,42 @@ module GameElements
       [TTTGame::HUMAN_MARKER, TTTGame::COMPUTER_MARKER].each do |mark|
         WINNING_LINES.each do |line|
           if winning_spot?(line, mark)
-            @open_winning_spots[mark] = empty_spot(line)
+            open_winning_spots[mark] = empty_spot(line)
           end
         end
       end
     end
 
     def reset
-      (1..9).each { |key| @squares[key] = Square.new }
+      (1..9).each { |key| squares[key] = Square.new }
       reset_open_winning_spots
     end
 
-    # rubocop:disable Metrics/MethodLength
+    # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
     def draw
-      text = <<~TXT
+      puts <<~TXT
            |     |
-        #{@squares[1]}  |  #{@squares[2]}  |  #{@squares[3]}
-           |     |
-      -----+-----+-----
-           |     |
-        #{@squares[4]}  |  #{@squares[5]}  |  #{@squares[6]}
+        #{squares[1]}  |  #{squares[2]}  |  #{squares[3]}
            |     |
       -----+-----+-----
            |     |
-        #{@squares[7]}  |  #{@squares[8]}  |  #{@squares[9]}
+        #{squares[4]}  |  #{squares[5]}  |  #{squares[6]}
+           |     |
+      -----+-----+-----
+           |     |
+        #{squares[7]}  |  #{squares[8]}  |  #{squares[9]}
            |     |
 
       TXT
-      puts text
     end
-    # rubocop:enable Metrics/MethodLength
+    # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
 
     private
 
-    def three_identical_markers?(squares)
-      markers = squares.select(&:marked?).collect(&:marker)
+    attr_reader :squares
+
+    def three_identical_markers?(sqs)
+      markers = sqs.select(&:marked?).collect(&:marker)
       return false if markers.size != 3
       markers.uniq.size == 1
     end
@@ -339,7 +331,7 @@ module GameElements
     end
 
     def exactly_2?(mark, line)
-      c = @squares.values_at(*line).count do |square|
+      c = squares.values_at(*line).count do |square|
         square.marker == mark
       end
       c == 2
@@ -350,7 +342,7 @@ module GameElements
     end
 
     def reset_open_winning_spots
-      @open_winning_spots.each_key { |k| @open_winning_spots[k] = nil }
+      open_winning_spots.each_key { |k| open_winning_spots[k] = nil }
     end
   end
 
@@ -372,7 +364,7 @@ module GameElements
     end
 
     def to_s
-      @marker
+      marker
     end
   end
 
@@ -387,20 +379,24 @@ module GameElements
     end
 
     def reset
-      @score = STARTING_SCORE
+      self.score = STARTING_SCORE
     end
 
     def increase
-      @score += 1
+      self.score += 1
     end
 
     def winning_score?
-      @score >= WINNING_SCORE
+      score >= WINNING_SCORE
     end
 
     def to_s
-      @score.to_s
+      score.to_s
     end
+
+    private
+
+    attr_writer :score
   end
 end
 
@@ -447,7 +443,7 @@ module Players
     attr_writer :difficulty
 
     def spot_selection(open_spots, open_winning_spots)
-      case @difficulty
+      case difficulty
       when '1' then easy_mode(open_spots)
       when '2' then medium_mode(open_spots, open_winning_spots)
       when '3' then hard_mode(open_spots, open_winning_spots)
@@ -455,6 +451,8 @@ module Players
     end
 
     private
+
+    attr_reader :difficulty
 
     def set_name
       @name = POTENTIAL_COMPUTER_NAMES.sample
@@ -517,7 +515,8 @@ class TTTGame
   include Inputable
   include Settable
 
-  attr_reader :board, :human, :computer, :quit_early
+  attr_reader :board, :human, :computer
+  attr_accessor :quit_early, :winner, :current_marker
 
   def initialize
     display_welcome_message
@@ -539,7 +538,6 @@ class TTTGame
       display_endgame
       break if quit_early || !play_again?
       reset
-      display_play_again_message
     end
   end
 
@@ -555,8 +553,8 @@ class TTTGame
   end
 
   def determine_winner
-    @winner = human if human.win?
-    @winner = computer if computer.win?
+    self.winner = human if human.win?
+    self.winner = computer if computer.win?
   end
 
   def update_points
@@ -581,25 +579,24 @@ class TTTGame
   def current_player_moves
     if human_turn?
       human_moves
-      @current_marker = COMPUTER_MARKER
+      self.current_marker = COMPUTER_MARKER
     else
       computer_moves
-      @current_marker = HUMAN_MARKER
+      self.current_marker = HUMAN_MARKER
     end
   end
 
   def human_turn?
-    @current_marker == HUMAN_MARKER
+    current_marker == HUMAN_MARKER
   end
 
   def human_moves
-    puts "Choose an empty square (#{joinor(board.unmarked_spots)}): "
-    square = nil
-    loop do
-      square = gets.chomp.delete(' ').to_i
-      break if board.unmarked_spots.include?(square)
-      puts "Sorry, that's not a valid choice."
-    end
+    prompt = "Choose an empty square (#{joinor(board.unmarked_spots)}): "
+    validation_array = board.unmarked_spots.map(&:to_s)
+    error = "Sorry, that's not a valid choice."
+
+    square = get_input(prompt, validation_array, error).to_i
+
     board[square] = human.marker
   end
 
@@ -617,7 +614,7 @@ class TTTGame
 
   def reset_board
     board.reset
-    @current_marker = FIRST_TO_MOVE
+    self.current_marker = FIRST_TO_MOVE
     clear_screen
   end
 
@@ -627,7 +624,7 @@ class TTTGame
   end
 
   def reset_winner
-    @winner = nil
+    self.winner = nil
   end
 end
 
