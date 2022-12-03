@@ -1,4 +1,21 @@
+module Joinable
+
+  def joinor(array, delimiter=", ", final_delim='or')
+    cloned_array = array.clone
+
+    if array.size < 3
+      cloned_array.join(" #{final_delim} ")
+    else
+      cloned_array[-1] = "#{final_delim} #{array[-1]}"
+      cloned_array.join(delimiter)
+    end
+  end
+
+end
+
 module Displayable
+  include Joinable
+
   def clear_screen
     system "clear"
   end
@@ -29,11 +46,9 @@ module Displayable
   def display_opening_message
     clear_screen
     text = <<~TXT
-    Thanks for being patient and answering those questions!
+    You chose to use #{TTTGame::HUMAN_MARKER} as your marker.
 
-    You chose to use #{TTTGame::HUMAN_MARKER}'s as your marker.
-
-    You'll be playing against #{computer.name}, and they'll be using #{TTTGame::COMPUTER_MARKER}'s as their marker.
+    #{computer.name} will be your opponent, using #{TTTGame::COMPUTER_MARKER} as their marker.
 
     You can quit early after each completed board if #{computer.name} is too difficult.
 
@@ -108,17 +123,6 @@ module Displayable
   def clear_screen_and_display_board
     clear_screen
     display_board
-  end
-
-  def joinor(array, delimiter=", ", final_delim='or')
-    cloned_array = array.clone
-
-    if array.size < 3
-      cloned_array.join(" #{final_delim} ")
-    else
-      cloned_array[-1] = "#{final_delim} #{array[-1]}"
-      cloned_array.join(delimiter)
-    end
   end
 end
 
@@ -420,6 +424,19 @@ module Players
   end
 
   class Human < GeneralPlayer
+    include Inputable
+    include Joinable
+
+    def move(board)
+      prompt = "Choose an empty square (#{joinor(board.unmarked_spots)}): "
+      validation_array = board.unmarked_spots.map(&:to_s)
+      error = "Sorry, that's not a valid choice."
+  
+      square = get_input(prompt, validation_array, error).to_i
+  
+      board[square] = marker
+    end
+
     private
 
     def set_name
@@ -442,12 +459,10 @@ module Players
 
     attr_writer :difficulty
 
-    def spot_selection(open_spots, open_winning_spots)
-      case difficulty
-      when '1' then easy_mode(open_spots)
-      when '2' then medium_mode(open_spots, open_winning_spots)
-      when '3' then hard_mode(open_spots, open_winning_spots)
-      end
+    def move(board)
+      board.determine_open_winning_spots
+      sp = spot_selection(board.unmarked_spots, board.open_winning_spots)
+      board[sp] = marker
     end
 
     private
@@ -456,6 +471,14 @@ module Players
 
     def set_name
       @name = POTENTIAL_COMPUTER_NAMES.sample
+    end
+
+    def spot_selection(open_spots, open_winning_spots)
+      case difficulty
+      when '1' then easy_mode(open_spots)
+      when '2' then medium_mode(open_spots, open_winning_spots)
+      when '3' then hard_mode(open_spots, open_winning_spots)
+      end
     end
 
     def easy_mode(open_spots)
@@ -544,7 +567,7 @@ class TTTGame
   def scoring_gameplay_loop
     loop do
       display_board
-      player_move
+      move_phase
       update_points
       display_result
       break if winning_score? || quit?
@@ -568,7 +591,7 @@ class TTTGame
     human.win? || computer.win?
   end
 
-  def player_move
+  def move_phase
     loop do
       current_player_moves
       break if board.someone_won? || board.full?
@@ -578,32 +601,16 @@ class TTTGame
 
   def current_player_moves
     if human_turn?
-      human_moves
+      human.move(board)
       self.current_marker = COMPUTER_MARKER
     else
-      computer_moves
+      computer.move(board)
       self.current_marker = HUMAN_MARKER
     end
   end
 
   def human_turn?
     current_marker == HUMAN_MARKER
-  end
-
-  def human_moves
-    prompt = "Choose an empty square (#{joinor(board.unmarked_spots)}): "
-    validation_array = board.unmarked_spots.map(&:to_s)
-    error = "Sorry, that's not a valid choice."
-
-    square = get_input(prompt, validation_array, error).to_i
-
-    board[square] = human.marker
-  end
-
-  def computer_moves
-    board.determine_open_winning_spots
-    sp = computer.spot_selection(board.unmarked_spots, board.open_winning_spots)
-    board[sp] = computer.marker
   end
 
   def reset
