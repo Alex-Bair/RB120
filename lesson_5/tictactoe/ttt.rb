@@ -3,6 +3,10 @@ module Displayable
     system "clear"
   end
 
+  def pause(duration = 1)
+    sleep duration
+  end
+
   def wait_for_input
     puts
     puts "Press [ENTER] to continue."
@@ -17,8 +21,8 @@ module Displayable
     Rules: https://en.wikipedia.org/wiki/Tic-tac-toe
 
     Before we begin, you'll need to:
-    - select a marker
     - provide your name
+    - select a marker
     - decide the turn order
     - choose a difficulty
     TXT
@@ -77,14 +81,14 @@ module Displayable
       puts "#{winner} won! The score was #{human.score} to #{computer.score}"
     else
       puts "You quit early!"
-      sleep 1
+      pause
     end
   end
 
   def display_goodbye_message
     clear_screen
     puts "Thanks for playing TicTacToe! Goodbye!"
-    sleep 1
+    pause
   end
 
   def display_board
@@ -156,27 +160,9 @@ end
 
 module Settable
   VALID_FIRST_TURNS = ['1', '2', '3']
-  VALID_DIFFICULTIES = ['1', '2', '3']
 
   def set_constant(name, value)
     TTTGame.const_set(name, value)
-  end
-
-  def set_computer_difficulty
-    clear_screen
-    err = "Invalid choice. Please choose #{joinor(VALID_DIFFICULTIES)}"
-    computer.difficulty = get_input(difficulty_prompt, VALID_DIFFICULTIES, err)
-    puts
-  end
-
-  def difficulty_prompt
-    <<~TXT
-    Please choose a difficulty (#{joinor(VALID_DIFFICULTIES)}):
-
-    1 - Easy
-    2 - Medium
-    3 - Hard
-    TXT
   end
 
   def set_first_to_move
@@ -198,6 +184,29 @@ module Settable
     2 - Opponent
     3 - Let opponent decide
     TXT
+  end
+end
+
+module Resettable
+  def reset
+    reset_board
+    reset_scores
+    reset_winner
+  end
+
+  def reset_board
+    board.reset
+    self.current_marker = self.class::FIRST_TO_MOVE
+    clear_screen
+  end
+
+  def reset_scores
+    human.score.reset
+    computer.score.reset
+  end
+
+  def reset_winner
+    self.winner = nil
   end
 end
 
@@ -373,6 +382,9 @@ end
 
 module Players
   class GeneralPlayer
+    include Inputable
+    include Displayable
+
     attr_reader :marker, :score, :name
 
     def initialize
@@ -390,9 +402,6 @@ module Players
   end
 
   class Human < GeneralPlayer
-    include Inputable
-    include Displayable
-
     def initialize
       super
       set_marker
@@ -441,15 +450,16 @@ module Players
   end
 
   class Computer < GeneralPlayer
-    POTENTIAL_COMPUTER_NAMES = ["N64", "PS2", "PC", "GBC", "NDS", "GC"]
+    POTENTIAL_COMPUTER_NAMES = ["Elster", "Star", "Storch", "Eule"] +
+                               ["Kolibri", "Mynah", "Ara", "Adler", "Falke"]
     POTENTIAL_COMPUTER_MARKERS = ['X', 'O']
+    VALID_DIFFICULTIES = ['1', '2', '3']
     PRIORITIZED_MOVE = 5
-
-    attr_writer :difficulty
 
     def initialize(human)
       super()
       determine_marker(human)
+      set_difficulty
     end
 
     def move(board)
@@ -461,6 +471,22 @@ module Players
     private
 
     attr_reader :difficulty
+
+    def set_difficulty
+      clear_screen
+      err = "Invalid choice. Please choose #{joinor(VALID_DIFFICULTIES)}"
+      @difficulty = get_input(difficulty_prompt, VALID_DIFFICULTIES, err)
+    end
+
+    def difficulty_prompt
+      <<~TXT
+      Please choose a difficulty (#{joinor(VALID_DIFFICULTIES)}):
+  
+      1 - Easy
+      2 - Medium
+      3 - Hard
+      TXT
+    end
 
     def set_name
       @name = POTENTIAL_COMPUTER_NAMES.sample
@@ -537,6 +563,7 @@ class TTTGame
   include Displayable
   include Inputable
   include Settable
+  include Resettable
 
   attr_reader :board, :human, :computer
   attr_accessor :quit_early, :winner, :current_marker
@@ -546,7 +573,6 @@ class TTTGame
     @board = GameElements::Board.new
     @human = Players::Human.new
     @computer = Players::Computer.new(human)
-    set_computer_difficulty
     set_first_to_move
     @current_marker = FIRST_TO_MOVE
     @quit_early = false
@@ -610,27 +636,6 @@ class TTTGame
 
   def human_turn?
     current_marker == human.marker
-  end
-
-  def reset
-    reset_board
-    reset_scores
-    reset_winner
-  end
-
-  def reset_board
-    board.reset
-    self.current_marker = FIRST_TO_MOVE
-    clear_screen
-  end
-
-  def reset_scores
-    human.score.reset
-    computer.score.reset
-  end
-
-  def reset_winner
-    self.winner = nil
   end
 end
 
