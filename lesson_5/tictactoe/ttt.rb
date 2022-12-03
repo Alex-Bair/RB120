@@ -1,21 +1,4 @@
-module Joinable
-
-  def joinor(array, delimiter=", ", final_delim='or')
-    cloned_array = array.clone
-
-    if array.size < 3
-      cloned_array.join(" #{final_delim} ")
-    else
-      cloned_array[-1] = "#{final_delim} #{array[-1]}"
-      cloned_array.join(delimiter)
-    end
-  end
-
-end
-
 module Displayable
-  include Joinable
-
   def clear_screen
     system "clear"
   end
@@ -46,9 +29,9 @@ module Displayable
   def display_opening_message
     clear_screen
     text = <<~TXT
-    You chose to use #{TTTGame::HUMAN_MARKER} as your marker.
+    You chose to use #{human.marker} as your marker.
 
-    #{computer.name} will be your opponent, using #{TTTGame::COMPUTER_MARKER} as their marker.
+    #{computer.name} will be your opponent, using #{computer.marker} as their marker.
 
     You can quit early after each completed board if #{computer.name} is too difficult.
 
@@ -80,9 +63,9 @@ module Displayable
     clear_screen_and_display_board
 
     case board.winning_marker
-    when TTTGame::HUMAN_MARKER
+    when human.marker
       puts "#{human.name} won a board!"
-    when TTTGame::COMPUTER_MARKER
+    when computer.marker
       puts "#{computer.name} won a board!"
     else
       puts "It's a tie!"
@@ -158,45 +141,25 @@ module Inputable
       puts error_str
     end
   end
+
+  def joinor(array, delimiter=", ", final_delim='or')
+    cloned_array = array.clone
+
+    if array.size < 3
+      cloned_array.join(" #{final_delim} ")
+    else
+      cloned_array[-1] = "#{final_delim} #{array[-1]}"
+      cloned_array.join(delimiter)
+    end
+  end
 end
 
 module Settable
   VALID_FIRST_TURNS = ['1', '2', '3']
   VALID_DIFFICULTIES = ['1', '2', '3']
-  POTENTIAL_COMPUTER_MARKERS = ['X', 'O']
 
   def set_constant(name, value)
     TTTGame.const_set(name, value)
-  end
-
-  def set_markers
-    clear_screen
-    set_human_marker
-    set_computer_marker
-    clear_screen
-  end
-
-  def set_human_marker
-    puts "Please enter a single non-space character to be your marker."
-    answer = nil
-    loop do
-      answer = gets.chomp.strip
-      break if valid_marker?(answer)
-      puts "Invalid marker. Please enter a single non-space character."
-    end
-    puts
-    set_constant('HUMAN_MARKER', answer)
-  end
-
-  def valid_marker?(string)
-    string.length == 1
-  end
-
-  def set_computer_marker
-    choices = POTENTIAL_COMPUTER_MARKERS.select do |char|
-      char.downcase != TTTGame::HUMAN_MARKER.downcase
-    end
-    set_constant("COMPUTER_MARKER", choices.sample)
   end
 
   def set_computer_difficulty
@@ -220,9 +183,9 @@ module Settable
     clear_screen
     err = "Invalid choice. Please choose #{joinor(VALID_FIRST_TURNS)}"
     marker =  case get_input(first_to_move_prompt, VALID_FIRST_TURNS, err)
-              when '1' then TTTGame::HUMAN_MARKER
-              when '2' then TTTGame::COMPUTER_MARKER
-              else [TTTGame::HUMAN_MARKER, TTTGame::COMPUTER_MARKER].sample
+              when '1' then human.marker
+              when '2' then computer.marker
+              else [human.marker, computer.marker].sample
               end
     set_constant('FIRST_TO_MOVE', marker)
   end
@@ -283,7 +246,7 @@ module GameElements
 
     def determine_open_winning_spots
       reset_open_winning_spots
-      [TTTGame::HUMAN_MARKER, TTTGame::COMPUTER_MARKER].each do |mark|
+      current_markers.each do |mark|
         WINNING_LINES.each do |line|
           if winning_spot?(line, mark)
             open_winning_spots[mark] = empty_spot(line)
@@ -297,7 +260,7 @@ module GameElements
       reset_open_winning_spots
     end
 
-    # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
+    # rubocop:disable Metrics/AbcSize
     def draw
       puts <<~TXT
            |     |
@@ -314,7 +277,7 @@ module GameElements
 
       TXT
     end
-    # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
+    # rubocop:enable Metrics/AbcSize
 
     private
 
@@ -343,6 +306,10 @@ module GameElements
 
     def winning_spot?(line, mark)
       empty_square?(line) && exactly_2?(mark, line)
+    end
+
+    def current_markers
+      squares.select { |_, sq| sq.marked? }.values.map(&:marker).uniq
     end
 
     def reset_open_winning_spots
@@ -408,10 +375,9 @@ module Players
   class GeneralPlayer
     attr_reader :marker, :score, :name
 
-    def initialize(mark)
-      @marker = mark
-      @score = GameElements::Score.new
+    def initialize
       set_name
+      @score = GameElements::Score.new
     end
 
     def win?
@@ -425,21 +391,27 @@ module Players
 
   class Human < GeneralPlayer
     include Inputable
-    include Joinable
+    include Displayable
+
+    def initialize
+      super
+      set_marker
+    end
 
     def move(board)
       prompt = "Choose an empty square (#{joinor(board.unmarked_spots)}): "
       validation_array = board.unmarked_spots.map(&:to_s)
       error = "Sorry, that's not a valid choice."
-  
+
       square = get_input(prompt, validation_array, error).to_i
-  
+
       board[square] = marker
     end
 
     private
 
     def set_name
+      clear_screen
       n = ''
       loop do
         puts "What's your name?"
@@ -449,15 +421,36 @@ module Players
         'with at least one non-space character.'
       end
       @name = n
-      puts
+    end
+
+    def set_marker
+      clear_screen
+      puts "Please enter a single non-space character to be your marker."
+      answer = nil
+      loop do
+        answer = gets.chomp.strip
+        break if valid_marker?(answer)
+        puts "Invalid marker. Please enter a single non-space character."
+      end
+      @marker = answer
+    end
+
+    def valid_marker?(string)
+      string.length == 1
     end
   end
 
   class Computer < GeneralPlayer
     POTENTIAL_COMPUTER_NAMES = ["N64", "PS2", "PC", "GBC", "NDS", "GC"]
+    POTENTIAL_COMPUTER_MARKERS = ['X', 'O']
     PRIORITIZED_MOVE = 5
 
     attr_writer :difficulty
+
+    def initialize(human)
+      super()
+      determine_marker(human)
+    end
 
     def move(board)
       board.determine_open_winning_spots
@@ -471,6 +464,13 @@ module Players
 
     def set_name
       @name = POTENTIAL_COMPUTER_NAMES.sample
+    end
+
+    def determine_marker(human)
+      choices = POTENTIAL_COMPUTER_MARKERS.select do |char|
+        char.downcase != human.marker.downcase
+      end
+      @marker = choices.sample
     end
 
     def spot_selection(open_spots, open_winning_spots)
@@ -544,9 +544,8 @@ class TTTGame
   def initialize
     display_welcome_message
     @board = GameElements::Board.new
-    set_markers
-    @human = Players::Human.new(HUMAN_MARKER)
-    @computer = Players::Computer.new(COMPUTER_MARKER)
+    @human = Players::Human.new
+    @computer = Players::Computer.new(human)
     set_computer_difficulty
     set_first_to_move
     @current_marker = FIRST_TO_MOVE
@@ -582,8 +581,8 @@ class TTTGame
 
   def update_points
     case board.winning_marker
-    when HUMAN_MARKER then human.score.increase
-    when COMPUTER_MARKER then computer.score.increase
+    when human.marker then human.score.increase
+    when computer.marker then computer.score.increase
     end
   end
 
@@ -602,15 +601,15 @@ class TTTGame
   def current_player_moves
     if human_turn?
       human.move(board)
-      self.current_marker = COMPUTER_MARKER
+      self.current_marker = computer.marker
     else
       computer.move(board)
-      self.current_marker = HUMAN_MARKER
+      self.current_marker = human.marker
     end
   end
 
   def human_turn?
-    current_marker == HUMAN_MARKER
+    current_marker == human.marker
   end
 
   def reset
