@@ -1,9 +1,7 @@
 =begin
 To do:
-- modules for similar purpose classes (GameElements, Players)
 - review other TTT LS code reviews for common feedback
 - refactor where possible
-- rubocop
 =end
 
 require 'pry'
@@ -19,6 +17,7 @@ module Displayable
     gets
   end
 
+  # rubocop:disable Metrics/MethodLength
   def display_welcome_message
     clear_screen
     text = <<~TXT
@@ -40,15 +39,15 @@ module Displayable
     text = <<~TXT
     Thanks for being patient and answering those questions!
 
-    You chose to use #{self.class::HUMAN_MARKER}'s as your marker.
+    You chose to use #{TTTGame::HUMAN_MARKER}'s as your marker.
 
-    You'll be playing against #{computer.name}, your computer, and they'll be using #{self.class::COMPUTER_MARKER}'s as their marker.
-
-    #{self.class::FIRST_TO_MOVE}'s will move first.
-
-    First to #{GameElements::Score::WINNING_SCORE} wins!
+    You'll be playing against #{computer.name}, your computer, and they'll be using #{TTTGame::COMPUTER_MARKER}'s as their marker.
 
     You can quit early after each completed board if #{computer.name} is too difficult.
+
+    #{TTTGame::FIRST_TO_MOVE}'s will move first.
+
+    First to #{GameElements::Score::WINNING_SCORE} points wins!
 
     Squares will be chosen using the numbering scheme below:
 
@@ -68,14 +67,15 @@ module Displayable
     wait_for_input
     clear_screen
   end
+  # rubocop:enable Metrics/MethodLength
 
   def display_result
     clear_screen_and_display_board
 
     case board.winning_marker
-    when self.class::HUMAN_MARKER
+    when TTTGame::HUMAN_MARKER
       puts "#{human.name} won a board!"
-    when self.class::COMPUTER_MARKER
+    when TTTGame::COMPUTER_MARKER
       puts "#{computer.name} won a board!"
     else
       puts "It's a tie!"
@@ -92,6 +92,7 @@ module Displayable
 
   def display_goodbye_message
     puts "Thanks for playing TicTacToe! Goodbye!"
+    sleep 1
   end
 
   def display_board
@@ -101,8 +102,11 @@ module Displayable
   end
 
   def display_status
-    puts "#{human.name} is #{human.marker}'s        #{computer.name} is #{computer.marker}'s"
-    puts "#{human.name}'s score: #{human.score}    #{computer.name}'s score: #{computer.score}"
+    text = <<~TXT
+    #{human.name} is #{human.marker}'s        #{computer.name} is #{computer.marker}'s
+    #{human.name}'s score: #{human.score}    #{computer.name}'s score: #{computer.score}
+    TXT
+    puts text
   end
 
   def clear_screen_and_display_board
@@ -162,7 +166,7 @@ module Settable
   POTENTIAL_COMPUTER_MARKERS = ['X', 'O']
 
   def set_constant(name, value)
-    self.class.const_set(name, value)
+    TTTGame.const_set(name, value)
   end
 
   def set_markers
@@ -174,22 +178,13 @@ module Settable
 
   def set_computer_marker
     choices = POTENTIAL_COMPUTER_MARKERS.select do |char|
-      char.downcase != self.class::HUMAN_MARKER.downcase
+      char.downcase != TTTGame::HUMAN_MARKER.downcase
     end
     set_constant("COMPUTER_MARKER", choices.sample)
   end
 
   def set_computer_difficulty
-    clear_screen
-    text = <<~TXT
-    Please choose a difficulty (#{joinor(VALID_DIFFICULTIES)}):
-
-    1 - Easy
-    2 - Medium
-    3 - Hard
-    TXT
-    puts text
-
+    display_computer_difficulty_prompt
     answer = nil
     loop do
       answer = gets.chomp.delete(' ').to_i
@@ -200,8 +195,20 @@ module Settable
     computer.difficulty = answer
   end
 
+  def display_computer_difficulty_prompt
+    clear_screen
+    text = <<~TXT
+    Please choose a difficulty (#{joinor(VALID_DIFFICULTIES)}):
+
+    1 - Easy
+    2 - Medium
+    3 - Hard
+    TXT
+    puts text
+  end
+
   def set_human_marker
-    puts "Please enter a single non-space character to represent you on the TicTacToe board."
+    puts "Please enter a single non-space character to be your marker."
     answer = nil
     loop do
       answer = gets.chomp.strip
@@ -217,56 +224,66 @@ module Settable
   end
 
   def set_first_to_move
-    clear_screen
-    puts "Who would you like to move first? (#{joinor(VALID_FIRST_TURNS)}})"
-    puts "1 - You"
-    puts "2 - Computer"
-    puts "3 - Let the computer decide"
-    answer = nil
-    loop do
-      answer = gets.chomp.delete(' ').to_i
-      break if VALID_FIRST_TURNS.include?(answer)
-      puts "Invalid choice. Please enter #{joinor(VALID_FIRST_TURNS)}."
-    end
-    marker =  case answer
-              when 1 then self.class::HUMAN_MARKER
-              when 2 then self.class::COMPUTER_MARKER
-              else [self.class::HUMAN_MARKER, self.class::COMPUTER_MARKER].sample
+    display_first_to_move_prompt
+    marker =  case first_to_move_input
+              when 1 then TTTGame::HUMAN_MARKER
+              when 2 then TTTGame::COMPUTER_MARKER
+              else [TTTGame::HUMAN_MARKER, TTTGame::COMPUTER_MARKER].sample
               end
     set_constant('FIRST_TO_MOVE', marker)
+  end
+
+  def display_first_to_move_prompt
+    clear_screen
+    text = <<~TXT
+    Who would you like to move first? (#{joinor(VALID_FIRST_TURNS)}})
+    
+    1 - You
+    2 - Computer
+    3 - Let the computer decide
+    TXT
+    puts text
+  end
+
+  def first_to_move_input
+    loop do
+      answer = gets.chomp.delete(' ').to_i
+      return answer if VALID_FIRST_TURNS.include?(answer)
+      puts "Invalid choice. Please enter #{joinor(VALID_FIRST_TURNS)}."
+    end
   end
 end
 
 module GameElements
   class Board
     attr_reader :open_winning_spots
-  
+
     WINNING_LINES = [[1, 2, 3], [4, 5, 6], [7, 8, 9]] +
                     [[1, 4, 7], [2, 5, 8], [3, 6, 9]] +
                     [[1, 5, 9], [3, 5, 7]]
-  
+
     def initialize
       @squares = {}
       @open_winning_spots = {}
       reset
     end
-  
+
     def []=(key, marker)
       @squares[key].marker = marker
     end
-  
+
     def unmarked_keys
       @squares.keys.select { |key| @squares[key].unmarked? }
     end
-  
+
     def full?
       unmarked_keys.empty?
     end
-  
+
     def someone_won?
       !!winning_marker
     end
-  
+
     def winning_marker
       WINNING_LINES.each do |line|
         squares = @squares.values_at(*line)
@@ -276,7 +293,7 @@ module GameElements
       end
       nil
     end
-  
+
     def determine_open_winning_spots
       reset_open_winning_spots
       [TTTGame::HUMAN_MARKER, TTTGame::COMPUTER_MARKER].each do |mark|
@@ -287,107 +304,108 @@ module GameElements
         end
       end
     end
-  
+
     def reset
       (1..9).each { |key| @squares[key] = Square.new }
       reset_open_winning_spots
     end
-  
+
     # rubocop:disable Metrics/MethodLength
-    # rubocop:disable Metrics/AbcSize
     def draw
-      puts "     |     |"
-      puts "  #{@squares[1]}  |  #{@squares[2]}  |  #{@squares[3]}"
-      puts "     |     |"
-      puts "-----+-----+-----"
-      puts "     |     |"
-      puts "  #{@squares[4]}  |  #{@squares[5]}  |  #{@squares[6]}"
-      puts "     |     |"
-      puts "-----+-----+-----"
-      puts "     |     |"
-      puts "  #{@squares[7]}  |  #{@squares[8]}  |  #{@squares[9]}"
-      puts "     |     |"
-      puts
+      text = <<~TXT
+           |     |
+        #{@squares[1]}  |  #{@squares[2]}  |  #{@squares[3]}
+           |     |
+      -----+-----+-----
+           |     |
+        #{@squares[4]}  |  #{@squares[5]}  |  #{@squares[6]}
+           |     |
+      -----+-----+-----
+           |     |
+        #{@squares[7]}  |  #{@squares[8]}  |  #{@squares[9]}
+           |     |
+
+      TXT
+      puts text
     end
     # rubocop:enable Metrics/MethodLength
-    # rubocop:enable Metrics/AbcSize
-  
+
     private
-  
+
     def three_identical_markers?(squares)
       markers = squares.select(&:marked?).collect(&:marker)
       return false if markers.size != 3
       markers.uniq.size == 1
     end
-  
+
     def empty_square_key(line)
       line.intersection(unmarked_keys).first
     end
-  
+
     def empty_square?(line)
       !!empty_square_key(line)
     end
-  
+
     def exactly_2?(mark, line)
       c = @squares.values_at(*line).count do |square|
-            square.marker == mark
-          end
+        square.marker == mark
+      end
       c == 2
     end
-  
+
     def winning_spot?(line, mark)
       empty_square?(line) && exactly_2?(mark, line)
     end
-  
+
     def reset_open_winning_spots
-      @open_winning_spots.each_key {|k| @open_winning_spots[k] = nil}
+      @open_winning_spots.each_key { |k| @open_winning_spots[k] = nil }
     end
   end
-  
+
   class Square
     INITIAL_MARKER = ' '
-  
+
     attr_accessor :marker
-  
+
     def initialize
       @marker = INITIAL_MARKER
     end
-  
+
     def unmarked?
       marker == INITIAL_MARKER
     end
-  
+
     def marked?
       marker != INITIAL_MARKER
     end
-  
+
     def to_s
       @marker
     end
   end
-  
+
   class Score
     attr_reader :score
-  
+
     STARTING_SCORE = 0
     WINNING_SCORE = 5
-  
+
     def initialize
       reset
     end
-  
+
     def reset
       @score = STARTING_SCORE
     end
-  
+
     def increase
       @score += 1
     end
-  
+
     def winning_score?
       @score >= WINNING_SCORE
     end
-  
+
     def to_s
       @score.to_s
     end
@@ -422,7 +440,8 @@ module Players
         puts "What's your name?"
         n = gets.chomp.strip
         break unless n.empty?
-        puts "Invalid name, you must enter a non-empty value with at least one non-space character."
+        puts 'Invalid name. Please enter a name ' \
+        'with at least one non-space character.'
       end
       @name = n
       puts
@@ -484,7 +503,7 @@ module Players
     end
 
     def defensive_move(open_winning_spots)
-      open_winning_spots.select {|mark, _| mark != marker}.values.first
+      open_winning_spots.select { |mark, _| mark != marker }.values.first
     end
 
     def random_move(open_spots)
@@ -594,8 +613,8 @@ class TTTGame
 
   def computer_moves
     board.determine_open_winning_spots
-    spot = computer.spot_selection(board.unmarked_keys, board.open_winning_spots)
-    board[spot] = computer.marker
+    sp = computer.spot_selection(board.unmarked_keys, board.open_winning_spots)
+    board[sp] = computer.marker
   end
 
   def reset
