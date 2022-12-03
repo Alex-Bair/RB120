@@ -1,14 +1,18 @@
 =begin
 To do:
 
-- allow difficulty settings?
 - display rules and grid schematic during welcome message
 - refactor where possible
 - test all possible inputs (empty spaces? lowercase vs uppercase?)
 - access modifiers
+- modules for similar purpose methods
+- use a YAML for the text?
+- review other TTT LS code reviews for common feedback
+- rubocop
 =end
 
 require 'pry'
+require 'yaml'
 
 class Board
   attr_reader :open_winning_spots
@@ -192,13 +196,15 @@ class Player
   end
 
   def to_s
-    "test_player" #update to be the name of the player once implemented
+    name
   end
 end
 
 class Computer < Player
   POTENTIAL_COMPUTER_NAMES = ["N64", "PS2", "PC", "GBC", "NDS", "GC"]
-
+  PRIORITIZED_MOVE = 5
+  
+  attr_accessor :difficulty
 
   def set_name
     @name = POTENTIAL_COMPUTER_NAMES.sample
@@ -223,20 +229,42 @@ class Computer < Player
   def random_move(open_spots)
     open_spots.sample
   end
-  
-  def prioritized_move
-    5
+
+  def at_least_hard_difficulty?
+    difficulty >= 3
   end
   
-  def spot_selection(open_spots, open_winning_spots)
-    if open_spots.include?(prioritized_move)
-      prioritized_move
-    elsif computer_winning_spot?(open_winning_spots)
-      offensive_move(open_winning_spots)
-    elsif player_winning_spot?(open_winning_spots)
+  def at_least_medium_difficulty?
+    difficulty >= 2
+  end
+  
+  def easy_mode(open_spots)
+    open_spots.sample
+  end
+
+  def medium_mode(open_spots, open_winning_spots)
+    if player_winning_spot?(open_winning_spots)
       defensive_move(open_winning_spots)
+    elsif open_spots.include?(PRIORITIZED_MOVE)
+      PRIORITIZED_MOVE
     else
-      open_spots.sample
+      easy_mode(open_spots)
+    end
+  end
+
+  def hard_move(open_spots, open_winning_spots)
+    if computer_winning_spot?(open_winning_spots)
+      offensive_move(open_winning_spots)
+    else
+      medium_mode(open_spots, open_winning_spots)
+    end
+  end
+
+  def spot_selection(open_spots, open_winning_spots)
+    case difficulty
+    when 1 then easy_mode(open_spots)
+    when 2 then medium_mode(open_spots, open_winning_spots)
+    when 3 then hard_mode(open_spots, open_winning_spots)
     end
   end
 end
@@ -278,6 +306,7 @@ class TTTGame
   VALID_NO = ['n', 'no']
   VALID_INPUTS = VALID_YES + VALID_NO
   VALID_FIRST_TURNS = [1, 2, 3]
+  VALID_DIFFICULTIES = [1, 2, 3] 
   POTENTIAL_COMPUTER_MARKERS = ['X', 'O']
 
   attr_reader :board, :human, :computer, :quit_early
@@ -288,6 +317,7 @@ class TTTGame
     set_markers
     @human = Player.new(HUMAN_MARKER)
     @computer = Computer.new(COMPUTER_MARKER)
+    set_computer_difficulty
     set_first_to_move
     @current_marker = FIRST_TO_MOVE
     @quit_early = false
@@ -310,6 +340,25 @@ class TTTGame
     set_constant("COMPUTER_MARKER", choices.sample)
   end
 
+  def set_computer_difficulty
+    text = <<~TXT
+    Please choose a difficulty (#{joinor(VALID_DIFFICULTIES)}):
+    
+    1 - Easy
+    2 - Medium
+    3 - Hard
+    TXT
+    puts text
+    
+    answer = nil
+    loop do
+      answer = gets.chomp.strip.to_i
+      break if VALID_DIFFICULTIES.include?(answer)
+      puts "Invalid choice. Please choose #{joinor(VALID_DIFFICULTIES)}"
+    end
+    computer.difficulty = answer
+  end
+
   def set_human_marker
     puts "Please enter a single non-space character to represent you on the TicTacToe board."
     answer = nil
@@ -327,7 +376,7 @@ class TTTGame
   end
 
   def set_first_to_move
-    puts "Who would you like to move first? (1, 2, or 3)"
+    puts "Who would you like to move first? (#{joinor(VALID_FIRST_TURNS)}})"
     puts "1 - You"
     puts "2 - Computer"
     puts "3 - Let the computer decide"
@@ -335,7 +384,7 @@ class TTTGame
     loop do
       answer = gets.chomp.strip.to_i
       break if VALID_FIRST_TURNS.include?(answer)
-      puts "Invalid choice. Please enter 1, 2, or 3."
+      puts "Invalid choice. Please enter #{joinor(VALID_FIRST_TURNS)}."
     end
     marker =  case answer
               when 1 then HUMAN_MARKER
