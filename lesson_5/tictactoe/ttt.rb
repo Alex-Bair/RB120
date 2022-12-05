@@ -115,12 +115,12 @@ end
 
 module Inputable
   VALID_YES = ['y', 'yes']
-  VALID_NO = ['n', 'no']
+  VALID_NO = ['n', 'no', '']
   VALID_YES_AND_NO = VALID_YES + VALID_NO
 
   def quit?
-    prompt = "Would you like to give up? (y/n)"
-    error = "Sorry, must be y or n."
+    prompt = "Would you like to give up? (y/n). Or, press [ENTER] to continue."
+    error = "Invalid input, must be y, n, or only press [ENTER]."
     answer = get_input(prompt, VALID_YES_AND_NO, error)
 
     self.quit_early = true if VALID_YES.include?(answer)
